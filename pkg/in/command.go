@@ -2,11 +2,13 @@ package in
 
 import (
 	"encoding/json"
-	"github.com/samcontesse/gitlab-merge-request-resource/pkg"
-	"github.com/xanzy/go-gitlab"
 	"net/url"
 	"os"
 	"strconv"
+	"strings"
+
+	"github.com/samcontesse/gitlab-merge-request-resource/pkg"
+	"github.com/xanzy/go-gitlab"
 )
 
 type Command struct {
@@ -45,7 +47,7 @@ func (command *Command) Run(destination string, request Request) (Response, erro
 		return Response{}, err
 	}
 
-	mr, _, err := command.client.MergeRequests.GetMergeRequest(request.Source.GetProjectPath(), request.Version.ID, &gitlab.GetMergeRequestsOptions{})
+	mr, _, err := command.client.MergeRequests.GetMergeRequestChanges(request.Source.GetProjectPath(), request.Version.ID, &gitlab.GetMergeRequestChangesOptions{})
 	if err != nil {
 		return Response{}, err
 	}
@@ -122,6 +124,18 @@ func (command *Command) Run(destination string, request Request) (Response, erro
 	if err != nil {
 		return Response{}, err
 	}
+
+	err = os.Mkdir(".git/resource", 0755)
+	if err != nil {
+		return Response{}, err
+	}
+
+	var changedFiles []string
+	for _, change := range mr.Changes {
+		changedFiles = append(changedFiles, change.NewPath)
+	}
+
+	err = os.WriteFile(".git/resource/changed_files", []byte(strings.Join(changedFiles, "\n")), 0644)
 
 	response := Response{Version: request.Version, Metadata: buildMetadata(mr, commit)}
 

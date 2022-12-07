@@ -29,6 +29,17 @@ var _ = Describe("In", func() {
 		destination string
 	)
 
+	type changes []struct {
+		OldPath     string `json:"old_path"`
+		NewPath     string `json:"new_path"`
+		AMode       string `json:"a_mode"`
+		BMode       string `json:"b_mode"`
+		Diff        string `json:"diff"`
+		NewFile     bool   `json:"new_file"`
+		RenamedFile bool   `json:"renamed_file"`
+		DeletedFile bool   `json:"deleted_file"`
+	}
+
 	BeforeEach(func() {
 		destination, _ = os.MkdirTemp("", "gitlab-merge-request-resource-in")
 		t, _ = time.Parse(time.RFC3339, "2022-01-01T08:00:00Z")
@@ -50,7 +61,7 @@ var _ = Describe("In", func() {
 	Describe("Run", func() {
 
 		BeforeEach(func() {
-			mux.HandleFunc("/api/v4/projects/namespace/project/merge_requests/1", func(w http.ResponseWriter, r *http.Request) {
+			mux.HandleFunc("/api/v4/projects/namespace/project/merge_requests/1/changes", func(w http.ResponseWriter, r *http.Request) {
 				mr := gitlab.MergeRequest{
 					IID:             88,
 					ID:              99,
@@ -61,6 +72,28 @@ var _ = Describe("In", func() {
 					SourceBranch:    "source-branch",
 					TargetBranch:    "target-branch",
 					Author:          &gitlab.BasicUser{Name: "Tester"},
+					Changes: changes{
+						{
+							OldPath:     "/foo",
+							NewPath:     "/foo",
+							AMode:       "",
+							BMode:       "",
+							Diff:        "",
+							NewFile:     false,
+							RenamedFile: false,
+							DeletedFile: false,
+						},
+						{
+							OldPath:     "/bar",
+							NewPath:     "/bar",
+							AMode:       "",
+							BMode:       "",
+							Diff:        "",
+							NewFile:     false,
+							RenamedFile: false,
+							DeletedFile: false,
+						},
+					},
 				}
 				output, _ := json.Marshal(mr)
 				w.Header().Set("content-type", "application/json")
@@ -115,8 +148,29 @@ var _ = Describe("In", func() {
 				Expect(response.Metadata[0].Value).To(Equal("99"))
 				_, err = os.Stat(filepath.Join(destination, ".git", "merge-request.json"))
 				Expect(err).Should(BeNil())
+				_, err = os.Stat(filepath.Join(destination, ".git", "resource", "changed_files"))
+				Expect(err).Should(BeNil())
 				sb, _ := os.ReadFile(filepath.Join(destination, ".git", "merge-request-source-branch"))
 				Expect(string(sb)).Should(Equal("source-branch"))
+			})
+			It("Should write file changes", func() {
+				project, _ := url.Parse("namespace/project.git")
+				uri := root.ResolveReference(project)
+
+				request := in.Request{
+					Source: pkg.Source{
+						URI:          uri.String(),
+						PrivateToken: "$",
+					},
+					Version: pkg.Version{ID: 1},
+				}
+
+				_, err := command.Run(destination, request)
+				Expect(err).Should(BeNil())
+				_, err = os.Stat(filepath.Join(destination, ".git", "resource", "changed_files"))
+				Expect(err).Should(BeNil())
+				cf, _ := os.ReadFile(filepath.Join(destination, ".git", "resource", "changed_files"))
+				Expect(string(cf)).Should(Equal("/foo\n/bar"))
 			})
 		})
 

@@ -51,6 +51,8 @@ Checks if there are new merge requests or merge requests with new commits.
 If you need to retrieve any information about the merge request in your tasks, the script writes the raw API response of the
 [get single merge request call](https://docs.gitlab.com/ee/api/merge_requests.html#get-single-mr) to `.git/merge-request.json`. 
 The name of the source branch is extracted to `.git/merge-request-source-branch` for convenience. 
+The paths of all changed files are also saved to
+`.git/resources/changed_files`.
 
 ### `out`: Update a merge request's merge status
 
