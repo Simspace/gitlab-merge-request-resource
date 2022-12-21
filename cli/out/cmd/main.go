@@ -2,8 +2,8 @@ package main
 
 import (
 	"encoding/json"
-	"github.com/samcontesse/gitlab-merge-request-resource/pkg"
-	"github.com/samcontesse/gitlab-merge-request-resource/pkg/out"
+	"github.com/simspace/gitlab-merge-request-resource/pkg"
+	"github.com/simspace/gitlab-merge-request-resource/pkg/out"
 	"github.com/xanzy/go-gitlab"
 	"os"
 )

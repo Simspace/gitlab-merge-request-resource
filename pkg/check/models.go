@@ -1,7 +1,7 @@
 package check
 
 import (
-	. "github.com/samcontesse/gitlab-merge-request-resource/pkg"
+	. "github.com/simspace/gitlab-merge-request-resource/pkg"
 )
 
 type Request struct {

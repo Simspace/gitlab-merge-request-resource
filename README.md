@@ -11,7 +11,7 @@ resource_types:
 - name: merge-request
   type: docker-image
   source:
-    repository: samcontesse/gitlab-merge-request-resource
+    repository: simspace/gitlab-merge-request-resource
 
 resources:
 - name: merge-request

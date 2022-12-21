@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/samcontesse/gitlab-merge-request-resource/pkg"
+	"github.com/simspace/gitlab-merge-request-resource/pkg"
 	"github.com/xanzy/go-gitlab"
 )
 

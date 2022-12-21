@@ -1,4 +1,4 @@
-module github.com/samcontesse/gitlab-merge-request-resource
+module github.com/simspace/gitlab-merge-request-resource
 
 go 1.19
 
