@@ -1,119 +1,105 @@
 package check
 
 import (
+	"context"
+	"strconv"
 	"strings"
 	"time"
 
+	"github.com/Khan/genqlient/graphql"
 	"github.com/simspace/gitlab-merge-request-resource/pkg"
 	"github.com/xanzy/go-gitlab"
 )
 
 type Command struct {
-	client *gitlab.Client
+	client   *graphql.Client
+	clientv4 *gitlab.Client
 }
 
-func NewCommand(client *gitlab.Client) *Command {
+func NewCommand(client *graphql.Client, clientv4 *gitlab.Client) *Command {
 	return &Command{
 		client: client,
 	}
 }
 
+func (command *Command) GetClient() graphql.Client {
+	return *command.client
+}
+
 func (command *Command) Run(request Request) (Response, error) {
-	labels := gitlab.Labels(request.Source.Labels)
+	labels := request.Source.Labels
 
-	// https://docs.gitlab.com/ee/api/pipelines.html#list-project-pipelines
-	sort, err := request.Source.GetSort()
-	if err != nil {
-		return Response{}, err
-	}
-
-	options := &gitlab.ListProjectMergeRequestsOptions{
-		State:        gitlab.String("opened"),
-		OrderBy:      gitlab.String("updated_at"),
-		Sort:         gitlab.String(sort),
-		Labels:       &labels,
-		TargetBranch: gitlab.String(request.Source.TargetBranch),
-		SourceBranch: gitlab.String(request.Source.SourceBranch),
-	}
-
-	requests, _, err := command.client.MergeRequests.ListProjectMergeRequests(request.Source.GetProjectPath(), options)
+	resp, err := pkg.GetProject(context.Background(), command.GetClient(), request.Source.GetProjectPath(), pkg.MergeRequestStateOpened)
 	if err != nil {
 		return Response{}, err
 	}
 
 	versions := make([]pkg.Version, 0)
 
-	for _, mr := range requests {
-		if mr.SHA == "" {
+	for _, mr := range resp.Project.GetMergeRequests().Nodes {
+		if mr.DiffHeadSha == "" {
+			continue
+		}
+		mrLabels := mr.GetLabels().Nodes
+		if !matchLabels(labels, mrLabels) {
 			continue
 		}
 
-		commit, _, err := command.client.Commits.GetCommit(mr.ProjectID, mr.SHA)
-		if err != nil {
-			return Response{}, err
-		}
-
-		updatedAt := commit.CommittedDate
-
-		if strings.Contains(commit.Title, "[skip ci]") || strings.Contains(commit.Message, "[skip ci]") {
-			continue
-		}
-
-		if !request.Source.SkipTriggerComment {
-			notes, _, _ := command.client.Notes.ListMergeRequestNotes(mr.ProjectID, mr.IID, &gitlab.ListMergeRequestNotesOptions{})
-			updatedAt = getMostRecentUpdateTime(notes, updatedAt)
-		}
-
-		if request.Source.SkipNotMergeable && mr.MergeStatus != "can_be_merged" {
-			continue
-		}
-
-		if request.Source.SkipWorkInProgress && mr.WorkInProgress {
-			continue
-		}
-
-		if request.Version.UpdatedAt != nil && !updatedAt.After(*request.Version.UpdatedAt) {
-			continue
-		}
-
-		match, err := matchPathPatterns(command.client, mr, request.Source)
-		if err != nil {
-			return nil, err
-		}
-
-		if !match {
-			continue
-		}
-
-		target := request.Source.GetTargetURL()
-		name := request.Source.GetPipelineName()
-
-		getOpts := gitlab.GetCommitStatusesOptions{
-			Name: &name,
-		}
-
-		statuses, _, err := command.client.Commits.GetCommitStatuses(mr.SourceProjectID, mr.SHA, &getOpts)
-		if err != nil {
-			return Response{}, err
-		}
-
-		// Only set status pending if no CI has already run on the commit
-		if len(statuses) == 0 {
-
-			options := gitlab.SetCommitStatusOptions{
-				Name:      &name,
-				TargetURL: &target,
-				State:     gitlab.Pending,
+		for _, commit := range mr.GetCommits().Nodes {
+			if commit.Sha != mr.DiffHeadSha {
+				continue
+			}
+			if strings.Contains(commit.Title, "[skip ci]") {
+				continue
 			}
 
-			_, _, _ = command.client.Commits.SetCommitStatus(mr.SourceProjectID, mr.SHA, &options)
-		}
+			updatedAt := &commit.AuthoredDate
 
-		versions = append(versions, pkg.Version{ID: mr.IID, UpdatedAt: updatedAt})
+			if request.Version.UpdatedAt != nil && !updatedAt.After(*request.Version.UpdatedAt) {
+				continue
+			}
+
+			statuses := commit.GetPipelines().Nodes
+
+			// Only set status pending if no CI has already run on the commit
+			if len(statuses) == 0 {
+				name := request.Source.GetPipelineName()
+				target := request.Source.GetTargetURL()
+				options := gitlab.SetCommitStatusOptions{
+					Name:      &name,
+					TargetURL: &target,
+					State:     gitlab.Pending,
+				}
+				_, _, _ = command.clientv4.Commits.SetCommitStatus(resp.Project.GetId(), commit.GetSha(), &options)
+			}
+
+			IIDStr, err := strconv.Atoi(mr.Iid)
+			if err != nil {
+				return Response{}, err
+			}
+			versions = append(versions, pkg.Version{ID: IIDStr, UpdatedAt: updatedAt})
+		}
 
 	}
 
 	return versions, nil
+}
+
+func matchLabels(sourceLabels []string, mrLabels []pkg.Label) bool {
+	if len(sourceLabels) == 0 {
+		return true
+	}
+	if len(mrLabels) == 0 {
+		return false
+	}
+	for _, label := range sourceLabels {
+		for _, mrLabel := range mrLabels {
+			if mrLabel.Title == label {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func matchPathPatterns(api *gitlab.Client, mr *gitlab.MergeRequest, source pkg.Source) (bool, error) {
