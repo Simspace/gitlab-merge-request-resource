@@ -2,16 +2,17 @@ package check_test
 
 import (
 	"encoding/json"
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
-	"github.com/simspace/gitlab-merge-request-resource/pkg"
-	"github.com/simspace/gitlab-merge-request-resource/pkg/check"
-	"github.com/xanzy/go-gitlab"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"os"
 	"time"
+
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+	"github.com/simspace/gitlab-merge-request-resource/pkg"
+	"github.com/simspace/gitlab-merge-request-resource/pkg/check"
+	"github.com/xanzy/go-gitlab"
 )
 
 var _ = Describe("Check", func() {
@@ -57,6 +58,14 @@ var _ = Describe("Check", func() {
 				mux.HandleFunc("/api/v4/projects/42/repository/commits/abc", func(w http.ResponseWriter, r *http.Request) {
 					commit := gitlab.Commit{CommittedDate: &t}
 					output, _ := json.Marshal(commit)
+					w.Header().Set("content-type", "application/json")
+					w.WriteHeader(http.StatusOK)
+					w.Write(output)
+				})
+
+				mux.HandleFunc("/api/v4/projects/42/repository/commits/abc/statuses", func(w http.ResponseWriter, r *http.Request) {
+					statuses := []gitlab.CommitStatus{}
+					output, _ := json.Marshal(statuses)
 					w.Header().Set("content-type", "application/json")
 					w.WriteHeader(http.StatusOK)
 					w.Write(output)

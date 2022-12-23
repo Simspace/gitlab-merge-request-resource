@@ -1,10 +1,11 @@
 package check
 
 import (
-	"github.com/simspace/gitlab-merge-request-resource/pkg"
-	"github.com/xanzy/go-gitlab"
 	"strings"
 	"time"
+
+	"github.com/simspace/gitlab-merge-request-resource/pkg"
+	"github.com/xanzy/go-gitlab"
 )
 
 type Command struct {
@@ -87,13 +88,26 @@ func (command *Command) Run(request Request) (Response, error) {
 		target := request.Source.GetTargetURL()
 		name := request.Source.GetPipelineName()
 
-		options := gitlab.SetCommitStatusOptions{
-			Name:      &name,
-			TargetURL: &target,
-			State:     gitlab.Pending,
+		getOpts := gitlab.GetCommitStatusesOptions{
+			Name: &name,
 		}
 
-		_, _, _ = command.client.Commits.SetCommitStatus(mr.SourceProjectID, mr.SHA, &options)
+		statuses, _, err := command.client.Commits.GetCommitStatuses(mr.SourceProjectID, mr.SHA, &getOpts)
+		if err != nil {
+			return Response{}, err
+		}
+
+		// Only set status pending if no CI has already run on the commit
+		if len(statuses) == 0 {
+
+			options := gitlab.SetCommitStatusOptions{
+				Name:      &name,
+				TargetURL: &target,
+				State:     gitlab.Pending,
+			}
+
+			_, _, _ = command.client.Commits.SetCommitStatus(mr.SourceProjectID, mr.SHA, &options)
+		}
 
 		versions = append(versions, pkg.Version{ID: mr.IID, UpdatedAt: updatedAt})
 
