@@ -50,44 +50,14 @@ type CommitPipelinesPipelineConnection struct {
 // GetNodes returns CommitPipelinesPipelineConnection.Nodes, and is useful for accessing the field via an interface.
 func (v *CommitPipelinesPipelineConnection) GetNodes() []Pipeline { return v.Nodes }
 
-// GetProjectProject includes the requested fields of the GraphQL type Project.
-type GetProjectProject struct {
-	// ID of the project.
-	Id string `json:"id"`
-	// Merge requests of the project.
-	MergeRequests GetProjectProjectMergeRequestsMergeRequestConnection `json:"mergeRequests"`
-}
-
-// GetId returns GetProjectProject.Id, and is useful for accessing the field via an interface.
-func (v *GetProjectProject) GetId() string { return v.Id }
-
-// GetMergeRequests returns GetProjectProject.MergeRequests, and is useful for accessing the field via an interface.
-func (v *GetProjectProject) GetMergeRequests() GetProjectProjectMergeRequestsMergeRequestConnection {
-	return v.MergeRequests
-}
-
-// GetProjectProjectMergeRequestsMergeRequestConnection includes the requested fields of the GraphQL type MergeRequestConnection.
-// The GraphQL type's documentation follows.
-//
-// The connection type for MergeRequest.
-type GetProjectProjectMergeRequestsMergeRequestConnection struct {
-	// A list of nodes.
-	Nodes []MergeRequest `json:"nodes"`
-}
-
-// GetNodes returns GetProjectProjectMergeRequestsMergeRequestConnection.Nodes, and is useful for accessing the field via an interface.
-func (v *GetProjectProjectMergeRequestsMergeRequestConnection) GetNodes() []MergeRequest {
-	return v.Nodes
-}
-
 // GetProjectResponse is returned by GetProject on success.
 type GetProjectResponse struct {
 	// Find a project.
-	Project GetProjectProject `json:"project"`
+	Project Project `json:"project"`
 }
 
 // GetProject returns GetProjectResponse.Project, and is useful for accessing the field via an interface.
-func (v *GetProjectResponse) GetProject() GetProjectProject { return v.Project }
+func (v *GetProjectResponse) GetProject() Project { return v.Project }
 
 // Label includes the GraphQL fields of Label requested by the fragment Label.
 type Label struct {
@@ -231,6 +201,34 @@ const (
 	PipelineStatusEnumWaitingForResource PipelineStatusEnum = "WAITING_FOR_RESOURCE"
 )
 
+// Project includes the GraphQL fields of Project requested by the fragment Project.
+type Project struct {
+	// ID of the project.
+	Id string `json:"id"`
+	// Merge requests of the project.
+	MergeRequests ProjectMergeRequestsMergeRequestConnection `json:"mergeRequests"`
+}
+
+// GetId returns Project.Id, and is useful for accessing the field via an interface.
+func (v *Project) GetId() string { return v.Id }
+
+// GetMergeRequests returns Project.MergeRequests, and is useful for accessing the field via an interface.
+func (v *Project) GetMergeRequests() ProjectMergeRequestsMergeRequestConnection {
+	return v.MergeRequests
+}
+
+// ProjectMergeRequestsMergeRequestConnection includes the requested fields of the GraphQL type MergeRequestConnection.
+// The GraphQL type's documentation follows.
+//
+// The connection type for MergeRequest.
+type ProjectMergeRequestsMergeRequestConnection struct {
+	// A list of nodes.
+	Nodes []MergeRequest `json:"nodes"`
+}
+
+// GetNodes returns ProjectMergeRequestsMergeRequestConnection.Nodes, and is useful for accessing the field via an interface.
+func (v *ProjectMergeRequestsMergeRequestConnection) GetNodes() []MergeRequest { return v.Nodes }
+
 // __GetProjectInput is used internally by genqlient
 type __GetProjectInput struct {
 	Project string            `json:"project"`
@@ -254,11 +252,14 @@ func GetProject(
 		Query: `
 query GetProject ($project: ID!, $state: MergeRequestState!) {
 	project(fullPath: $project) {
-		id
-		mergeRequests(state: $state, sort: UPDATED_ASC) {
-			nodes {
-				... MergeRequest
-			}
+		... Project
+	}
+}
+fragment Project on Project {
+	id
+	mergeRequests(state: $state, sort: UPDATED_ASC) {
+		nodes {
+			... MergeRequest
 		}
 	}
 }

@@ -48,15 +48,20 @@ fragment MergeRequest on MergeRequest {
   }
 }
 
-query GetProject($project: ID!, $state: MergeRequestState!) {
-  project(fullPath: $project) {
-    id
-    mergeRequests(state: $state, sort: UPDATED_ASC) {
-	  # @genqlient(flatten: true)
-      nodes {
-        ...MergeRequest
-      }
+fragment Project on Project {
+  id
+  mergeRequests(state: $state, sort: UPDATED_ASC) {
+	# @genqlient(flatten: true)
+    nodes {
+      ...MergeRequest
     }
+  }
+}
+
+query GetProject($project: ID!, $state: MergeRequestState!) {
+	# @genqlient(flatten: true)
+  project(fullPath: $project) {
+    ...Project
   }
 }`
 )
