@@ -2,12 +2,13 @@ package out
 
 import (
 	"encoding/json"
-	"github.com/simspace/gitlab-merge-request-resource/pkg"
-	"github.com/xanzy/go-gitlab"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
+
+	"github.com/simspace/gitlab-merge-request-resource/pkg/models"
+	"github.com/xanzy/go-gitlab"
 )
 
 type Command struct {
@@ -57,7 +58,7 @@ func (command *Command) Run(destination string, request Request) (Response, erro
 	}
 
 	response := Response{
-		Version: pkg.Version{
+		Version: models.Version{
 			ID:        mr.IID,
 			UpdatedAt: mr.UpdatedAt,
 		},
@@ -124,9 +125,9 @@ func (command *Command) updateCommitStatus(request Request, mr gitlab.MergeReque
 	return nil
 }
 
-func buildMetadata(mr *gitlab.MergeRequest) pkg.Metadata {
+func buildMetadata(mr *gitlab.MergeRequest) models.Metadata {
 
-	return []pkg.MetadataField{
+	return []models.MetadataField{
 		{
 			Name:  "id",
 			Value: strconv.Itoa(mr.ID),

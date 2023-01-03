@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/simspace/gitlab-merge-request-resource/pkg"
+	"github.com/simspace/gitlab-merge-request-resource/pkg/models"
 	"github.com/xanzy/go-gitlab"
 )
 
@@ -158,8 +158,8 @@ func (command *Command) createRepositoryUrl(pid int, token string) (*url.URL, er
 	return u, nil
 }
 
-func buildMetadata(mr *gitlab.MergeRequest, commit *gitlab.Commit) pkg.Metadata {
-	return []pkg.MetadataField{
+func buildMetadata(mr *gitlab.MergeRequest, commit *gitlab.Commit) models.Metadata {
+	return []models.MetadataField{
 		{
 			Name:  "id",
 			Value: strconv.Itoa(mr.ID),

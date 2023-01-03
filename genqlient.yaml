@@ -2,10 +2,9 @@
 # https://github.com/Khan/genqlient/blob/main/docs/genqlient.yaml
 schema: gitlab_schema.graphql
 operations:
-- pkg/*.go
-- pkg/**/*.go
-generated: pkg/generated.go
-package: pkg
+- pkg/gitlab/graphql.go
+generated: pkg/gitlab/generated.go
+package: gitlab
 bindings:
   MergeRequestID:
     type: string

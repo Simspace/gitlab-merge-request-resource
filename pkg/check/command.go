@@ -7,16 +7,17 @@ import (
 	"time"
 
 	"github.com/Khan/genqlient/graphql"
-	"github.com/simspace/gitlab-merge-request-resource/pkg"
-	"github.com/xanzy/go-gitlab"
+	"github.com/simspace/gitlab-merge-request-resource/pkg/gitlab"
+	"github.com/simspace/gitlab-merge-request-resource/pkg/models"
+	gitlabv4 "github.com/xanzy/go-gitlab"
 )
 
 type Command struct {
 	client   *graphql.Client
-	clientv4 *gitlab.Client
+	clientv4 *gitlabv4.Client
 }
 
-func NewCommand(client *graphql.Client, clientv4 *gitlab.Client) *Command {
+func NewCommand(client *graphql.Client, clientv4 *gitlabv4.Client) *Command {
 	return &Command{
 		client: client,
 	}
@@ -29,12 +30,12 @@ func (command *Command) GetClient() graphql.Client {
 func (command *Command) Run(request Request) (Response, error) {
 	labels := request.Source.Labels
 
-	resp, err := pkg.GetProject(context.Background(), command.GetClient(), request.Source.GetProjectPath(), pkg.MergeRequestStateOpened)
+	resp, err := gitlab.GetProject(context.Background(), command.GetClient(), request.Source.GetProjectPath(), gitlab.MergeRequestStateOpened)
 	if err != nil {
 		return Response{}, err
 	}
 
-	versions := make([]pkg.Version, 0)
+	versions := make([]models.Version, 0)
 
 	for _, mr := range resp.Project.GetMergeRequests().Nodes {
 		if mr.DiffHeadSha == "" {
@@ -74,10 +75,10 @@ func (command *Command) Run(request Request) (Response, error) {
 			if len(statuses) == 0 {
 				name := request.Source.GetPipelineName()
 				target := request.Source.GetTargetURL()
-				options := gitlab.SetCommitStatusOptions{
+				options := gitlabv4.SetCommitStatusOptions{
 					Name:      &name,
 					TargetURL: &target,
-					State:     gitlab.Pending,
+					State:     gitlabv4.Pending,
 				}
 				projID := stripID(resp.Project.GetId())
 				_, _, _ = command.clientv4.Commits.SetCommitStatus(projID, commit.GetSha(), &options)
@@ -87,7 +88,7 @@ func (command *Command) Run(request Request) (Response, error) {
 			if err != nil {
 				return Response{}, err
 			}
-			versions = append(versions, pkg.Version{ID: IIDStr, UpdatedAt: updatedAt})
+			versions = append(versions, models.Version{ID: IIDStr, UpdatedAt: updatedAt})
 		}
 
 	}
@@ -99,7 +100,7 @@ func stripID(s string) string {
 	return strings.ReplaceAll(s, "git://gitlab/Project/", "")
 }
 
-func matchLabels(sourceLabels []string, mrLabels []pkg.Label) bool {
+func matchLabels(sourceLabels []string, mrLabels []gitlab.Label) bool {
 	if len(sourceLabels) == 0 {
 		return true
 	}
@@ -116,7 +117,7 @@ func matchLabels(sourceLabels []string, mrLabels []pkg.Label) bool {
 	return false
 }
 
-func matchPathPatterns(mr *pkg.MergeRequest, source pkg.Source) (bool, error) {
+func matchPathPatterns(mr *gitlab.MergeRequest, source models.Source) (bool, error) {
 
 	if len(source.Paths) == 0 && len(source.IgnorePaths) == 0 {
 		return true, nil
@@ -137,7 +138,7 @@ func matchPathPatterns(mr *pkg.MergeRequest, source pkg.Source) (bool, error) {
 	return modified > 0, nil
 }
 
-func getMostRecentUpdateTime(notes []*gitlab.Note, updatedAt *time.Time) *time.Time {
+func getMostRecentUpdateTime(notes []*gitlabv4.Note, updatedAt *time.Time) *time.Time {
 	for _, note := range notes {
 		if strings.Contains(note.Body, "[trigger ci]") && updatedAt.Before(*note.UpdatedAt) {
 			return note.UpdatedAt

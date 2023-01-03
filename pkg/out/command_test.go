@@ -2,17 +2,18 @@ package out_test
 
 import (
 	"encoding/json"
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
-	"github.com/simspace/gitlab-merge-request-resource/pkg"
-	"github.com/simspace/gitlab-merge-request-resource/pkg/out"
-	"github.com/xanzy/go-gitlab"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"os"
 	"path"
+
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+	"github.com/simspace/gitlab-merge-request-resource/pkg/models"
+	"github.com/simspace/gitlab-merge-request-resource/pkg/out"
+	"github.com/xanzy/go-gitlab"
 )
 
 var _ = Describe("Out", func() {
@@ -64,7 +65,7 @@ var _ = Describe("Out", func() {
 			uri := root.ResolveReference(project)
 
 			request := out.Request{
-				Source: pkg.Source{URI: uri.String()},
+				Source: models.Source{URI: uri.String()},
 				Params: out.Params{
 					Repository: "repo",
 					Status:     "running",
@@ -112,7 +113,7 @@ var _ = Describe("Out", func() {
 			uri := root.ResolveReference(project)
 
 			request := out.Request{
-				Source: pkg.Source{URI: uri.String()},
+				Source: models.Source{URI: uri.String()},
 				Params: out.Params{
 					Repository: "repo",
 					Labels:     []string{"in-stage", "ut-pass"},
@@ -150,7 +151,7 @@ var _ = Describe("Out", func() {
 			uri := root.ResolveReference(project)
 
 			request := out.Request{
-				Source: pkg.Source{URI: uri.String()},
+				Source: models.Source{URI: uri.String()},
 				Params: out.Params{
 					Repository: "repo",
 					Status:     "running",
@@ -201,7 +202,7 @@ var _ = Describe("Out", func() {
 			uri := root.ResolveReference(project)
 
 			request := out.Request{
-				Source: pkg.Source{URI: uri.String()},
+				Source: models.Source{URI: uri.String()},
 				Params: out.Params{
 					Repository: "repo",
 					Comment:    out.Comment{FilePath: "comment.txt", Text: "new comment, $FILE_CONTENT"},

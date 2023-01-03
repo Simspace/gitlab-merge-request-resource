@@ -6,8 +6,8 @@ import (
 	"os"
 
 	"github.com/Khan/genqlient/graphql"
-	"github.com/simspace/gitlab-merge-request-resource/pkg"
 	"github.com/simspace/gitlab-merge-request-resource/pkg/check"
+	"github.com/simspace/gitlab-merge-request-resource/pkg/common"
 	"github.com/xanzy/go-gitlab"
 )
 
@@ -33,14 +33,14 @@ func main() {
 		},
 	}
 	client := graphql.NewClient("https://gitlab.com/api/graphql", &httpClient)
-	clientv4, err := gitlab.NewClient(request.Source.PrivateToken, gitlab.WithHTTPClient(pkg.GetDefaultClient(request.Source.Insecure)), gitlab.WithBaseURL(request.Source.GetBaseURL()))
+	clientv4, err := gitlab.NewClient(request.Source.PrivateToken, gitlab.WithHTTPClient(common.GetDefaultClient(request.Source.Insecure)), gitlab.WithBaseURL(request.Source.GetBaseURL()))
 	if err != nil {
-		pkg.Fatal("initializing gitlab client", err)
+		common.Fatal("initializing gitlab client", err)
 	}
 	command := check.NewCommand(&client, clientv4)
 	response, err := command.Run(request)
 	if err != nil {
-		pkg.Fatal("running command", err)
+		common.Fatal("running command", err)
 	}
 
 	outputResponse(response)
@@ -48,12 +48,12 @@ func main() {
 
 func inputRequest(request *check.Request) {
 	if err := json.NewDecoder(os.Stdin).Decode(request); err != nil {
-		pkg.Fatal("reading request from stdin", err)
+		common.Fatal("reading request from stdin", err)
 	}
 }
 
 func outputResponse(response check.Response) {
 	if err := json.NewEncoder(os.Stdout).Encode(response); err != nil {
-		pkg.Fatal("writing response to stdout", err)
+		common.Fatal("writing response to stdout", err)
 	}
 }

@@ -10,8 +10,8 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/simspace/gitlab-merge-request-resource/pkg"
 	"github.com/simspace/gitlab-merge-request-resource/pkg/check"
+	"github.com/simspace/gitlab-merge-request-resource/pkg/models"
 	"github.com/xanzy/go-gitlab"
 )
 
@@ -78,7 +78,7 @@ var _ = Describe("Check", func() {
 				uri := root.ResolveReference(project)
 
 				request := check.Request{
-					Source: pkg.Source{
+					Source: models.Source{
 						URI:          uri.String(),
 						PrivateToken: "$",
 					},
@@ -105,7 +105,7 @@ var _ = Describe("Check", func() {
 				uri := root.ResolveReference(project)
 
 				request := check.Request{
-					Source: pkg.Source{
+					Source: models.Source{
 						URI:          uri.String(),
 						PrivateToken: "$",
 					},

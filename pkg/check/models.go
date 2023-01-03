@@ -1,12 +1,12 @@
 package check
 
 import (
-	. "github.com/simspace/gitlab-merge-request-resource/pkg"
+	"github.com/simspace/gitlab-merge-request-resource/pkg/models"
 )
 
 type Request struct {
-	Source  Source  `json:"source"`
-	Version Version `json:"version,omitempty"`
+	Source  models.Source  `json:"source"`
+	Version models.Version `json:"version,omitempty"`
 }
 
-type Response []Version
+type Response []models.Version

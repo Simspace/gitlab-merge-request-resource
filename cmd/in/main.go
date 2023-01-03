@@ -2,10 +2,11 @@ package main
 
 import (
 	"encoding/json"
-	"github.com/simspace/gitlab-merge-request-resource/pkg"
+	"os"
+
+	"github.com/simspace/gitlab-merge-request-resource/pkg/common"
 	"github.com/simspace/gitlab-merge-request-resource/pkg/in"
 	"github.com/xanzy/go-gitlab"
-	"os"
 )
 
 func main() {
@@ -20,15 +21,15 @@ func main() {
 	var request in.Request
 	inputRequest(&request)
 
-	client, err := gitlab.NewClient(request.Source.PrivateToken, gitlab.WithHTTPClient(pkg.GetDefaultClient(request.Source.Insecure)), gitlab.WithBaseURL(request.Source.GetBaseURL()))
+	client, err := gitlab.NewClient(request.Source.PrivateToken, gitlab.WithHTTPClient(common.GetDefaultClient(request.Source.Insecure)), gitlab.WithBaseURL(request.Source.GetBaseURL()))
 	if err != nil {
-		pkg.Fatal("initializing gitlab client", err)
+		common.Fatal("initializing gitlab client", err)
 	}
 
 	command := in.NewCommand(client)
 	response, err := command.Run(destination, request)
 	if err != nil {
-		pkg.Fatal("running command", err)
+		common.Fatal("running command", err)
 	}
 
 	outputResponse(response)
@@ -36,12 +37,12 @@ func main() {
 
 func inputRequest(request *in.Request) {
 	if err := json.NewDecoder(os.Stdin).Decode(request); err != nil {
-		pkg.Fatal("reading request from stdin", err)
+		common.Fatal("reading request from stdin", err)
 	}
 }
 
 func outputResponse(response in.Response) {
 	if err := json.NewEncoder(os.Stdout).Encode(response); err != nil {
-		pkg.Fatal("writing response to stdout", err)
+		common.Fatal("writing response to stdout", err)
 	}
 }

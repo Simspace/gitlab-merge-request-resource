@@ -13,8 +13,8 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/simspace/gitlab-merge-request-resource/pkg"
 	"github.com/simspace/gitlab-merge-request-resource/pkg/in"
+	"github.com/simspace/gitlab-merge-request-resource/pkg/models"
 	"github.com/xanzy/go-gitlab"
 )
 
@@ -135,11 +135,11 @@ var _ = Describe("In", func() {
 				uri := root.ResolveReference(project)
 
 				request := in.Request{
-					Source: pkg.Source{
+					Source: models.Source{
 						URI:          uri.String(),
 						PrivateToken: "$",
 					},
-					Version: pkg.Version{ID: 1},
+					Version: models.Version{ID: 1},
 				}
 
 				response, err := command.Run(destination, request)
@@ -158,11 +158,11 @@ var _ = Describe("In", func() {
 				uri := root.ResolveReference(project)
 
 				request := in.Request{
-					Source: pkg.Source{
+					Source: models.Source{
 						URI:          uri.String(),
 						PrivateToken: "$",
 					},
-					Version: pkg.Version{ID: 1},
+					Version: models.Version{ID: 1},
 				}
 
 				_, err := command.Run(destination, request)
