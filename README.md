@@ -26,12 +26,12 @@ resources:
 * `insecure`: When set to `true`, SSL verification is turned off 
 * `skip_work_in_progress`: When set to `true`, merge requests mark as work in progress (WIP) will be skipped. Default `false`
 * `skip_not_mergeable`: When set to `true`, merge requests not marked as mergeable will be skipped. Default `false`
-* `skip_trigger_comment`: When set to `true`, the resource will not look up for `[trigger ci]` merge request comments to manually trigger builds. Default `false`  
+* `skip_trigger_comment`: When set to `true`, the resource will not look up for `[trigger ci]` merge request comments to manually trigger builds. Default `false`
 * `concourse_url`: When set, this url will be used to override `ATC_EXTERNAL_URL` during commit status updates.
-* `pipeline_name`(string): When set, this url will be used to override `BUILD_PIPELINE_NAME` during commit status updates.  
+* `pipeline_name`(string): When set, this url will be used to override `BUILD_PIPELINE_NAME` during commit status updates.
 * `labels`(string[]): Filter merge requests by label`[]`
-* `paths` (string[]): Include merge request if one of the modified file matches a path pattern (glob). Default: include all. 
-* `ignore_paths` (string[]): Exclude merge request if one of the modified files matches a path pattern (glob). Default: exclude none. 
+* `paths` (string[]): Include merge request if one of the modified files match a path pattern (glob) or is included inside a directory defined here. Default: include all. 
+* `ignore_paths` (string[]): Exclude merge request if one of the modified files matches a path pattern (glob) or is included inside a directory defined here. Default: exclude none. 
 * `target_branch`(string): Filter merge requests by target_branch. Default is empty string.
 * `source_branch`(string): Filter merge requests by source_branch. Default is empty string.
 * `sort` (string): Merge requests sorting order, either `asc` (default) or `desc` to reverse.

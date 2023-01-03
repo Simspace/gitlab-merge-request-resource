@@ -6,39 +6,12 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 // Raw GraphQL queries here are auto-generated into GoLang functions,
 // returning typed values that corresponde to the GraphQL types.
 const (
-	/*
-			_ = `# @genqlient
-		query GetProject($project: ID!, $state: MergeRequestState!) {
-		  project(fullPath: $project) {
-		    mergeRequests(state: $state, sort: UPDATED_ASC) {
-		      nodes {
-		        id
-		        title
-		        diffHeadSha
-		        commits {
-		          nodes {
-		            id
-		            authoredDate
-		            sha
-		            title
-		            pipelines {
-		              nodes {
-		                sha
-		                status
-		              }
-		            }
-		          }
-		        }
-		      }
-		    }
-		  }
-		}`
-	*/
 	_ = `# @genqlient
 fragment Pipeline on Pipeline {
   sha
@@ -67,6 +40,9 @@ fragment MergeRequest on MergeRequest {
   iid
   title
   diffHeadSha
+	diffStats {
+	  path
+	}
   commits {
 	# @genqlient(flatten: true)
     nodes {
@@ -110,6 +86,24 @@ func matchPath(patterns []string, path string) bool {
 		if ok {
 			return true
 		}
+		if isInsidePath(pattern, path) {
+			return true
+		}
 	}
 	return false
+}
+
+func isInsidePath(parent, child string) bool {
+	if parent == child {
+		return true
+	}
+
+	// we add a trailing slash so that we only get prefix matches on a
+	// directory separator
+	parentWithTrailingSlash := parent
+	if !strings.HasSuffix(parentWithTrailingSlash, string(filepath.Separator)) {
+		parentWithTrailingSlash += string(filepath.Separator)
+	}
+
+	return strings.HasPrefix(child, parentWithTrailingSlash)
 }

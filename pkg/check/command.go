@@ -45,6 +45,15 @@ func (command *Command) Run(request Request) (Response, error) {
 			continue
 		}
 
+		match, err := matchPathPatterns(&mr, request.Source)
+		if err != nil {
+			return nil, err
+		}
+
+		if !match {
+			continue
+		}
+
 		for _, commit := range mr.GetCommits().Nodes {
 			if commit.Sha != mr.DiffHeadSha {
 				continue
@@ -70,7 +79,8 @@ func (command *Command) Run(request Request) (Response, error) {
 					TargetURL: &target,
 					State:     gitlab.Pending,
 				}
-				_, _, _ = command.clientv4.Commits.SetCommitStatus(resp.Project.GetId(), commit.GetSha(), &options)
+				projID := stripID(resp.Project.GetId())
+				_, _, _ = command.clientv4.Commits.SetCommitStatus(projID, commit.GetSha(), &options)
 			}
 
 			IIDStr, err := strconv.Atoi(mr.Iid)
@@ -83,6 +93,10 @@ func (command *Command) Run(request Request) (Response, error) {
 	}
 
 	return versions, nil
+}
+
+func stripID(s string) string {
+	return strings.ReplaceAll(s, "git://gitlab/Project/", "")
 }
 
 func matchLabels(sourceLabels []string, mrLabels []pkg.Label) bool {
@@ -102,7 +116,7 @@ func matchLabels(sourceLabels []string, mrLabels []pkg.Label) bool {
 	return false
 }
 
-func matchPathPatterns(api *gitlab.Client, mr *gitlab.MergeRequest, source pkg.Source) (bool, error) {
+func matchPathPatterns(mr *pkg.MergeRequest, source pkg.Source) (bool, error) {
 
 	if len(source.Paths) == 0 && len(source.IgnorePaths) == 0 {
 		return true, nil
@@ -110,22 +124,12 @@ func matchPathPatterns(api *gitlab.Client, mr *gitlab.MergeRequest, source pkg.S
 
 	modified := 0
 
-	versions, _, err := api.MergeRequests.GetMergeRequestDiffVersions(mr.ProjectID, mr.IID, nil)
-	if err != nil {
-		return false, err
-	}
+	diffStats := mr.GetDiffStats()
 
-	if len(versions) > 0 {
-
-		latest := versions[0].ID
-		version, _, err := api.MergeRequests.GetSingleMergeRequestDiffVersion(mr.ProjectID, mr.IID, latest)
-		if err != nil {
-			return false, err
-		}
-
-		for _, d := range version.Diffs {
-			if source.AcceptPath(d.OldPath) || source.AcceptPath(d.NewPath) {
-				modified += 1
+	if len(diffStats) > 0 {
+		for _, d := range diffStats {
+			if source.AcceptPath(d.Path) {
+				modified++
 			}
 		}
 	}

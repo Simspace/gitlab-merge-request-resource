@@ -108,6 +108,8 @@ type MergeRequest struct {
 	Title string `json:"title"`
 	// Diff head SHA of the merge request.
 	DiffHeadSha string `json:"diffHeadSha"`
+	// Details about which files were changed in this merge request.
+	DiffStats []MergeRequestDiffStats `json:"diffStats"`
 	// Merge request commits.
 	Commits MergeRequestCommitsCommitConnection `json:"commits"`
 	// Labels of the merge request.
@@ -126,6 +128,9 @@ func (v *MergeRequest) GetTitle() string { return v.Title }
 // GetDiffHeadSha returns MergeRequest.DiffHeadSha, and is useful for accessing the field via an interface.
 func (v *MergeRequest) GetDiffHeadSha() string { return v.DiffHeadSha }
 
+// GetDiffStats returns MergeRequest.DiffStats, and is useful for accessing the field via an interface.
+func (v *MergeRequest) GetDiffStats() []MergeRequestDiffStats { return v.DiffStats }
+
 // GetCommits returns MergeRequest.Commits, and is useful for accessing the field via an interface.
 func (v *MergeRequest) GetCommits() MergeRequestCommitsCommitConnection { return v.Commits }
 
@@ -143,6 +148,18 @@ type MergeRequestCommitsCommitConnection struct {
 
 // GetNodes returns MergeRequestCommitsCommitConnection.Nodes, and is useful for accessing the field via an interface.
 func (v *MergeRequestCommitsCommitConnection) GetNodes() []Commit { return v.Nodes }
+
+// MergeRequestDiffStats includes the requested fields of the GraphQL type DiffStats.
+// The GraphQL type's documentation follows.
+//
+// Changes to a single file
+type MergeRequestDiffStats struct {
+	// File path, relative to repository root.
+	Path string `json:"path"`
+}
+
+// GetPath returns MergeRequestDiffStats.Path, and is useful for accessing the field via an interface.
+func (v *MergeRequestDiffStats) GetPath() string { return v.Path }
 
 // MergeRequestLabelsLabelConnection includes the requested fields of the GraphQL type LabelConnection.
 // The GraphQL type's documentation follows.
@@ -250,6 +267,9 @@ fragment MergeRequest on MergeRequest {
 	iid
 	title
 	diffHeadSha
+	diffStats {
+		path
+	}
 	commits {
 		nodes {
 			... Commit
