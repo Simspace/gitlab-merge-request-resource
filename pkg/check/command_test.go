@@ -8,11 +8,13 @@ import (
 	"os"
 	"time"
 
+	"github.com/Khan/genqlient/graphql"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/simspace/gitlab-merge-request-resource/pkg/check"
+	"github.com/simspace/gitlab-merge-request-resource/pkg/gitlab"
 	"github.com/simspace/gitlab-merge-request-resource/pkg/models"
-	"github.com/xanzy/go-gitlab"
+	gitlabv4 "github.com/xanzy/go-gitlab"
 )
 
 var _ = Describe("Check", func() {
@@ -25,13 +27,16 @@ var _ = Describe("Check", func() {
 	)
 
 	BeforeEach(func() {
-		t, _ = time.Parse(time.RFC3339, "2022-01-01T08:00:00Z")
+		t, _ = time.Parse(time.RFC3339, "2023-01-01T08:00:00Z")
 		mux = http.NewServeMux()
 		server := httptest.NewServer(mux)
 		root, _ = url.Parse(server.URL)
-		context, _ := url.Parse("/api/v4")
+		context, _ := url.Parse("/api/graphql")
 		base := root.ResolveReference(context)
-		client, _ := gitlab.NewClient("$", gitlab.WithBaseURL(base.String()))
+		client := graphql.NewClient(base.String(), nil)
+		contextv4, _ := url.Parse("/api/v4")
+		basev4 := root.ResolveReference(contextv4)
+		clientv4, _ := gitlabv4.NewClient("$", gitlabv4.WithBaseURL(basev4.String()))
 
 		_ = os.Setenv("ATC_EXTERNAL_URL", "https://concourse-ci.company.ltd")
 		_ = os.Setenv("BUILD_TEAM_NAME", "winner")
@@ -39,7 +44,7 @@ var _ = Describe("Check", func() {
 		_ = os.Setenv("BUILD_JOB_NAME", "release")
 		_ = os.Setenv("BUILD_NAME", "1")
 
-		command = check.NewCommand(client)
+		command = check.NewCommand(&client, clientv4)
 	})
 
 	Describe("Run", func() {
@@ -47,24 +52,42 @@ var _ = Describe("Check", func() {
 		Context("When it has a minimal valid configuration", func() {
 
 			BeforeEach(func() {
-				mux.HandleFunc("/api/v4/projects/namespace/project/merge_requests", func(w http.ResponseWriter, r *http.Request) {
-					mr := gitlab.MergeRequest{IID: 88, ID: 99, SHA: "abc", ProjectID: 42}
-					output, _ := json.Marshal([]gitlab.MergeRequest{mr})
-					w.Header().Set("content-type", "application/json")
-					w.WriteHeader(http.StatusOK)
-					w.Write(output)
-				})
-
-				mux.HandleFunc("/api/v4/projects/42/repository/commits/abc", func(w http.ResponseWriter, r *http.Request) {
-					commit := gitlab.Commit{CommittedDate: &t}
-					output, _ := json.Marshal(commit)
+				mux.HandleFunc("/api/graphql", func(w http.ResponseWriter, r *http.Request) {
+					projResp := gitlab.GetProjectResponse{
+						Project: gitlab.Project{
+							Id: "gid://gitlab/Project/1",
+							MergeRequests: gitlab.ProjectMergeRequestsMergeRequestConnection{
+								Nodes: []gitlab.MergeRequest{
+									{
+										Id:          "git://gitlab/MergeRequest/1234",
+										Iid:         "88",
+										Title:       "abc",
+										DiffHeadSha: "abc",
+										DiffStats:   []gitlab.MergeRequestDiffStats{},
+										Commits: gitlab.MergeRequestCommitsCommitConnection{
+											Nodes: []gitlab.Commit{
+												{
+													AuthoredDate: t,
+													Sha:          "abc",
+												},
+											},
+										},
+										Labels: gitlab.MergeRequestLabelsLabelConnection{
+											Nodes: []gitlab.Label{},
+										},
+									},
+								},
+							},
+						},
+					}
+					output, _ := json.Marshal(graphql.Response{Data: projResp})
 					w.Header().Set("content-type", "application/json")
 					w.WriteHeader(http.StatusOK)
 					w.Write(output)
 				})
 
 				mux.HandleFunc("/api/v4/projects/42/repository/commits/abc/statuses", func(w http.ResponseWriter, r *http.Request) {
-					statuses := []gitlab.CommitStatus{}
+					statuses := []gitlabv4.CommitStatus{}
 					output, _ := json.Marshal(statuses)
 					w.Header().Set("content-type", "application/json")
 					w.WriteHeader(http.StatusOK)
