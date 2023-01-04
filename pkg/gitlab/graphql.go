@@ -1,5 +1,7 @@
 package gitlab
 
+//go:generate go run github.com/Khan/genqlient
+
 // Raw GraphQL queries here are auto-generated into GoLang functions,
 // returning typed values that corresponde to the GraphQL types.
 const (
