@@ -19,7 +19,8 @@ type Command struct {
 
 func NewCommand(client *graphql.Client, clientv4 *gitlabv4.Client) *Command {
 	return &Command{
-		client: client,
+		client:   client,
+		clientv4: clientv4,
 	}
 }
 
