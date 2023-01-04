@@ -15,6 +15,8 @@ type Commit struct {
 	Id string `json:"id"`
 	// Timestamp of when the commit was authored.
 	AuthoredDate time.Time `json:"authoredDate"`
+	// Raw commit message.
+	Message string `json:"message"`
 	// SHA1 ID of the commit.
 	Sha string `json:"sha"`
 	// Title of the commit message.
@@ -28,6 +30,9 @@ func (v *Commit) GetId() string { return v.Id }
 
 // GetAuthoredDate returns Commit.AuthoredDate, and is useful for accessing the field via an interface.
 func (v *Commit) GetAuthoredDate() time.Time { return v.AuthoredDate }
+
+// GetMessage returns Commit.Message, and is useful for accessing the field via an interface.
+func (v *Commit) GetMessage() string { return v.Message }
 
 // GetSha returns Commit.Sha, and is useful for accessing the field via an interface.
 func (v *Commit) GetSha() string { return v.Sha }
@@ -78,12 +83,18 @@ type MergeRequest struct {
 	Title string `json:"title"`
 	// Diff head SHA of the merge request.
 	DiffHeadSha string `json:"diffHeadSha"`
+	// Source branch of the merge request.
+	SourceBranch string `json:"sourceBranch"`
+	// Target branch of the merge request.
+	TargetBranch string `json:"targetBranch"`
 	// Details about which files were changed in this merge request.
 	DiffStats []MergeRequestDiffStats `json:"diffStats"`
 	// Merge request commits.
 	Commits MergeRequestCommitsCommitConnection `json:"commits"`
 	// Labels of the merge request.
 	Labels MergeRequestLabelsLabelConnection `json:"labels"`
+	// All notes on this noteable.
+	Notes MergeRequestNotesNoteConnection `json:"notes"`
 }
 
 // GetId returns MergeRequest.Id, and is useful for accessing the field via an interface.
@@ -98,6 +109,12 @@ func (v *MergeRequest) GetTitle() string { return v.Title }
 // GetDiffHeadSha returns MergeRequest.DiffHeadSha, and is useful for accessing the field via an interface.
 func (v *MergeRequest) GetDiffHeadSha() string { return v.DiffHeadSha }
 
+// GetSourceBranch returns MergeRequest.SourceBranch, and is useful for accessing the field via an interface.
+func (v *MergeRequest) GetSourceBranch() string { return v.SourceBranch }
+
+// GetTargetBranch returns MergeRequest.TargetBranch, and is useful for accessing the field via an interface.
+func (v *MergeRequest) GetTargetBranch() string { return v.TargetBranch }
+
 // GetDiffStats returns MergeRequest.DiffStats, and is useful for accessing the field via an interface.
 func (v *MergeRequest) GetDiffStats() []MergeRequestDiffStats { return v.DiffStats }
 
@@ -106,6 +123,9 @@ func (v *MergeRequest) GetCommits() MergeRequestCommitsCommitConnection { return
 
 // GetLabels returns MergeRequest.Labels, and is useful for accessing the field via an interface.
 func (v *MergeRequest) GetLabels() MergeRequestLabelsLabelConnection { return v.Labels }
+
+// GetNotes returns MergeRequest.Notes, and is useful for accessing the field via an interface.
+func (v *MergeRequest) GetNotes() MergeRequestNotesNoteConnection { return v.Notes }
 
 // MergeRequestCommitsCommitConnection includes the requested fields of the GraphQL type CommitConnection.
 // The GraphQL type's documentation follows.
@@ -143,6 +163,18 @@ type MergeRequestLabelsLabelConnection struct {
 // GetNodes returns MergeRequestLabelsLabelConnection.Nodes, and is useful for accessing the field via an interface.
 func (v *MergeRequestLabelsLabelConnection) GetNodes() []Label { return v.Nodes }
 
+// MergeRequestNotesNoteConnection includes the requested fields of the GraphQL type NoteConnection.
+// The GraphQL type's documentation follows.
+//
+// The connection type for Note.
+type MergeRequestNotesNoteConnection struct {
+	// A list of nodes.
+	Nodes []Note `json:"nodes"`
+}
+
+// GetNodes returns MergeRequestNotesNoteConnection.Nodes, and is useful for accessing the field via an interface.
+func (v *MergeRequestNotesNoteConnection) GetNodes() []Note { return v.Nodes }
+
 // State of a GitLab merge request
 type MergeRequestState string
 
@@ -158,6 +190,20 @@ const (
 	// In open state.
 	MergeRequestStateOpened MergeRequestState = "opened"
 )
+
+// Note includes the GraphQL fields of Note requested by the fragment Note.
+type Note struct {
+	// Content of the note.
+	Body string `json:"body"`
+	// Timestamp of the note's last activity.
+	UpdatedAt time.Time `json:"updatedAt"`
+}
+
+// GetBody returns Note.Body, and is useful for accessing the field via an interface.
+func (v *Note) GetBody() string { return v.Body }
+
+// GetUpdatedAt returns Note.UpdatedAt, and is useful for accessing the field via an interface.
+func (v *Note) GetUpdatedAt() time.Time { return v.UpdatedAt }
 
 // Pipeline includes the GraphQL fields of Pipeline requested by the fragment Pipeline.
 type Pipeline struct {
@@ -268,6 +314,8 @@ fragment MergeRequest on MergeRequest {
 	iid
 	title
 	diffHeadSha
+	sourceBranch
+	targetBranch
 	diffStats {
 		path
 	}
@@ -281,10 +329,16 @@ fragment MergeRequest on MergeRequest {
 			... Label
 		}
 	}
+	notes {
+		nodes {
+			... Note
+		}
+	}
 }
 fragment Commit on Commit {
 	id
 	authoredDate
+	message
 	sha
 	title
 	pipelines {
@@ -295,6 +349,10 @@ fragment Commit on Commit {
 }
 fragment Label on Label {
 	title
+}
+fragment Note on Note {
+	body
+	updatedAt
 }
 fragment Pipeline on Pipeline {
 	sha
