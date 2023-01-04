@@ -37,6 +37,8 @@ fragment MergeRequest on MergeRequest {
   iid
   title
   diffHeadSha
+  draft
+  mergeStatusEnum
   sourceBranch
   targetBranch
   diffStats {

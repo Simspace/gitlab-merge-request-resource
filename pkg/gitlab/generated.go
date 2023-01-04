@@ -83,6 +83,10 @@ type MergeRequest struct {
 	Title string `json:"title"`
 	// Diff head SHA of the merge request.
 	DiffHeadSha string `json:"diffHeadSha"`
+	// Indicates if the merge request is a draft.
+	Draft bool `json:"draft"`
+	// Merge status of the merge request.
+	MergeStatusEnum MergeStatus `json:"mergeStatusEnum"`
 	// Source branch of the merge request.
 	SourceBranch string `json:"sourceBranch"`
 	// Target branch of the merge request.
@@ -108,6 +112,12 @@ func (v *MergeRequest) GetTitle() string { return v.Title }
 
 // GetDiffHeadSha returns MergeRequest.DiffHeadSha, and is useful for accessing the field via an interface.
 func (v *MergeRequest) GetDiffHeadSha() string { return v.DiffHeadSha }
+
+// GetDraft returns MergeRequest.Draft, and is useful for accessing the field via an interface.
+func (v *MergeRequest) GetDraft() bool { return v.Draft }
+
+// GetMergeStatusEnum returns MergeRequest.MergeStatusEnum, and is useful for accessing the field via an interface.
+func (v *MergeRequest) GetMergeStatusEnum() MergeStatus { return v.MergeStatusEnum }
 
 // GetSourceBranch returns MergeRequest.SourceBranch, and is useful for accessing the field via an interface.
 func (v *MergeRequest) GetSourceBranch() string { return v.SourceBranch }
@@ -189,6 +199,22 @@ const (
 	MergeRequestStateMerged MergeRequestState = "merged"
 	// In open state.
 	MergeRequestStateOpened MergeRequestState = "opened"
+)
+
+// Representation of whether a GitLab merge request can be merged.
+type MergeStatus string
+
+const (
+	// There are conflicts between the source and target branches.
+	MergeStatusCannotBeMerged MergeStatus = "CANNOT_BE_MERGED"
+	// Currently unchecked. The previous state was `CANNOT_BE_MERGED`.
+	MergeStatusCannotBeMergedRecheck MergeStatus = "CANNOT_BE_MERGED_RECHECK"
+	// There are no conflicts between the source and target branches.
+	MergeStatusCanBeMerged MergeStatus = "CAN_BE_MERGED"
+	// Currently checking for mergeability.
+	MergeStatusChecking MergeStatus = "CHECKING"
+	// Merge status has not been checked.
+	MergeStatusUnchecked MergeStatus = "UNCHECKED"
 )
 
 // Note includes the GraphQL fields of Note requested by the fragment Note.
@@ -314,6 +340,8 @@ fragment MergeRequest on MergeRequest {
 	iid
 	title
 	diffHeadSha
+	draft
+	mergeStatusEnum
 	sourceBranch
 	targetBranch
 	diffStats {

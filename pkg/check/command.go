@@ -42,16 +42,25 @@ func (command *Command) Run(request Request) (Response, error) {
 		if mr.DiffHeadSha == "" {
 			continue
 		}
-		mrLabels := mr.GetLabels().Nodes
-		if !matchLabels(labels, mrLabels) {
-			continue
-		}
 
 		if request.Source.SourceBranch != "" && mr.SourceBranch != request.Source.SourceBranch {
 			continue
 		}
 
 		if request.Source.TargetBranch != "" && mr.TargetBranch != request.Source.TargetBranch {
+			continue
+		}
+
+		if request.Source.SkipNotMergeable && mr.MergeStatusEnum != gitlab.MergeStatusCanBeMerged {
+			continue
+		}
+
+		if request.Source.SkipWorkInProgress && mr.Draft {
+			continue
+		}
+
+		mrLabels := mr.GetLabels().Nodes
+		if !matchLabels(labels, mrLabels) {
 			continue
 		}
 
