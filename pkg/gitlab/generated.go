@@ -55,14 +55,23 @@ type CommitPipelinesPipelineConnection struct {
 // GetNodes returns CommitPipelinesPipelineConnection.Nodes, and is useful for accessing the field via an interface.
 func (v *CommitPipelinesPipelineConnection) GetNodes() []Pipeline { return v.Nodes }
 
-// GetProjectResponse is returned by GetProject on success.
-type GetProjectResponse struct {
-	// Find a project.
-	Project Project `json:"project"`
+// GetCurrentUserResponse is returned by GetCurrentUser on success.
+type GetCurrentUserResponse struct {
+	// Get information about current user.
+	CurrentUser User `json:"currentUser"`
 }
 
-// GetProject returns GetProjectResponse.Project, and is useful for accessing the field via an interface.
-func (v *GetProjectResponse) GetProject() Project { return v.Project }
+// GetCurrentUser returns GetCurrentUserResponse.CurrentUser, and is useful for accessing the field via an interface.
+func (v *GetCurrentUserResponse) GetCurrentUser() User { return v.CurrentUser }
+
+// GetMergeRequestResponse is returned by GetMergeRequest on success.
+type GetMergeRequestResponse struct {
+	// Find a merge request.
+	MergeRequest MergeRequest `json:"mergeRequest"`
+}
+
+// GetMergeRequest returns GetMergeRequestResponse.MergeRequest, and is useful for accessing the field via an interface.
+func (v *GetMergeRequestResponse) GetMergeRequest() MergeRequest { return v.MergeRequest }
 
 // Label includes the GraphQL fields of Label requested by the fragment Label.
 type Label struct {
@@ -73,6 +82,15 @@ type Label struct {
 // GetTitle returns Label.Title, and is useful for accessing the field via an interface.
 func (v *Label) GetTitle() string { return v.Title }
 
+// ListMergeRequestsResponse is returned by ListMergeRequests on success.
+type ListMergeRequestsResponse struct {
+	// Find a project.
+	Project Project `json:"project"`
+}
+
+// GetProject returns ListMergeRequestsResponse.Project, and is useful for accessing the field via an interface.
+func (v *ListMergeRequestsResponse) GetProject() Project { return v.Project }
+
 // MergeRequest includes the GraphQL fields of MergeRequest requested by the fragment MergeRequest.
 type MergeRequest struct {
 	// ID of the merge request.
@@ -81,18 +99,28 @@ type MergeRequest struct {
 	Iid string `json:"iid"`
 	// Title of the merge request.
 	Title string `json:"title"`
+	// User who created this merge request.
+	Author MergeRequestAuthor `json:"author"`
 	// Diff head SHA of the merge request.
 	DiffHeadSha string `json:"diffHeadSha"`
+	// Details about which files were changed in this merge request.
+	DiffStats []MergeRequestDiffStats `json:"diffStats"`
 	// Indicates if the merge request is a draft.
 	Draft bool `json:"draft"`
 	// Merge status of the merge request.
 	MergeStatusEnum MergeStatus `json:"mergeStatusEnum"`
 	// Source branch of the merge request.
 	SourceBranch string `json:"sourceBranch"`
+	// ID of the merge request source project.
+	SourceProjectId int `json:"sourceProjectId"`
+	// Source project of the merge request.
+	SourceProject MergeRequestSourceProject `json:"sourceProject"`
 	// Target branch of the merge request.
 	TargetBranch string `json:"targetBranch"`
-	// Details about which files were changed in this merge request.
-	DiffStats []MergeRequestDiffStats `json:"diffStats"`
+	// Target project of the merge request.
+	TargetProject MergeRequestTargetProject `json:"targetProject"`
+	// Web URL of the merge request.
+	WebUrl string `json:"webUrl"`
 	// Merge request commits.
 	Commits MergeRequestCommitsCommitConnection `json:"commits"`
 	// Labels of the merge request.
@@ -110,8 +138,14 @@ func (v *MergeRequest) GetIid() string { return v.Iid }
 // GetTitle returns MergeRequest.Title, and is useful for accessing the field via an interface.
 func (v *MergeRequest) GetTitle() string { return v.Title }
 
+// GetAuthor returns MergeRequest.Author, and is useful for accessing the field via an interface.
+func (v *MergeRequest) GetAuthor() MergeRequestAuthor { return v.Author }
+
 // GetDiffHeadSha returns MergeRequest.DiffHeadSha, and is useful for accessing the field via an interface.
 func (v *MergeRequest) GetDiffHeadSha() string { return v.DiffHeadSha }
+
+// GetDiffStats returns MergeRequest.DiffStats, and is useful for accessing the field via an interface.
+func (v *MergeRequest) GetDiffStats() []MergeRequestDiffStats { return v.DiffStats }
 
 // GetDraft returns MergeRequest.Draft, and is useful for accessing the field via an interface.
 func (v *MergeRequest) GetDraft() bool { return v.Draft }
@@ -122,11 +156,20 @@ func (v *MergeRequest) GetMergeStatusEnum() MergeStatus { return v.MergeStatusEn
 // GetSourceBranch returns MergeRequest.SourceBranch, and is useful for accessing the field via an interface.
 func (v *MergeRequest) GetSourceBranch() string { return v.SourceBranch }
 
+// GetSourceProjectId returns MergeRequest.SourceProjectId, and is useful for accessing the field via an interface.
+func (v *MergeRequest) GetSourceProjectId() int { return v.SourceProjectId }
+
+// GetSourceProject returns MergeRequest.SourceProject, and is useful for accessing the field via an interface.
+func (v *MergeRequest) GetSourceProject() MergeRequestSourceProject { return v.SourceProject }
+
 // GetTargetBranch returns MergeRequest.TargetBranch, and is useful for accessing the field via an interface.
 func (v *MergeRequest) GetTargetBranch() string { return v.TargetBranch }
 
-// GetDiffStats returns MergeRequest.DiffStats, and is useful for accessing the field via an interface.
-func (v *MergeRequest) GetDiffStats() []MergeRequestDiffStats { return v.DiffStats }
+// GetTargetProject returns MergeRequest.TargetProject, and is useful for accessing the field via an interface.
+func (v *MergeRequest) GetTargetProject() MergeRequestTargetProject { return v.TargetProject }
+
+// GetWebUrl returns MergeRequest.WebUrl, and is useful for accessing the field via an interface.
+func (v *MergeRequest) GetWebUrl() string { return v.WebUrl }
 
 // GetCommits returns MergeRequest.Commits, and is useful for accessing the field via an interface.
 func (v *MergeRequest) GetCommits() MergeRequestCommitsCommitConnection { return v.Commits }
@@ -136,6 +179,19 @@ func (v *MergeRequest) GetLabels() MergeRequestLabelsLabelConnection { return v.
 
 // GetNotes returns MergeRequest.Notes, and is useful for accessing the field via an interface.
 func (v *MergeRequest) GetNotes() MergeRequestNotesNoteConnection { return v.Notes }
+
+// MergeRequestAuthor includes the requested fields of the GraphQL type MergeRequestAuthor.
+// The GraphQL type's documentation follows.
+//
+// The author of the merge request.
+type MergeRequestAuthor struct {
+	// Human-readable name of the user. Returns `****` if the user is a project bot
+	// and the requester does not have permission to view the project.
+	Name string `json:"name"`
+}
+
+// GetName returns MergeRequestAuthor.Name, and is useful for accessing the field via an interface.
+func (v *MergeRequestAuthor) GetName() string { return v.Name }
 
 // MergeRequestCommitsCommitConnection includes the requested fields of the GraphQL type CommitConnection.
 // The GraphQL type's documentation follows.
@@ -185,6 +241,15 @@ type MergeRequestNotesNoteConnection struct {
 // GetNodes returns MergeRequestNotesNoteConnection.Nodes, and is useful for accessing the field via an interface.
 func (v *MergeRequestNotesNoteConnection) GetNodes() []Note { return v.Nodes }
 
+// MergeRequestSourceProject includes the requested fields of the GraphQL type Project.
+type MergeRequestSourceProject struct {
+	// URL to connect to the project via HTTPS.
+	HttpUrlToRepo string `json:"httpUrlToRepo"`
+}
+
+// GetHttpUrlToRepo returns MergeRequestSourceProject.HttpUrlToRepo, and is useful for accessing the field via an interface.
+func (v *MergeRequestSourceProject) GetHttpUrlToRepo() string { return v.HttpUrlToRepo }
+
 // State of a GitLab merge request
 type MergeRequestState string
 
@@ -200,6 +265,15 @@ const (
 	// In open state.
 	MergeRequestStateOpened MergeRequestState = "opened"
 )
+
+// MergeRequestTargetProject includes the requested fields of the GraphQL type Project.
+type MergeRequestTargetProject struct {
+	// URL to connect to the project via HTTPS.
+	HttpUrlToRepo string `json:"httpUrlToRepo"`
+}
+
+// GetHttpUrlToRepo returns MergeRequestTargetProject.HttpUrlToRepo, and is useful for accessing the field via an interface.
+func (v *MergeRequestTargetProject) GetHttpUrlToRepo() string { return v.HttpUrlToRepo }
 
 // Representation of whether a GitLab merge request can be merged.
 type MergeStatus string
@@ -301,52 +375,109 @@ type ProjectMergeRequestsMergeRequestConnection struct {
 // GetNodes returns ProjectMergeRequestsMergeRequestConnection.Nodes, and is useful for accessing the field via an interface.
 func (v *ProjectMergeRequestsMergeRequestConnection) GetNodes() []MergeRequest { return v.Nodes }
 
-// __GetProjectInput is used internally by genqlient
-type __GetProjectInput struct {
+// User includes the requested fields of the GraphQL type UserCore.
+// The GraphQL type's documentation follows.
+//
+// Core represention of a GitLab user.
+type User struct {
+	// Human-readable name of the user. Returns `****` if the user is a project bot
+	// and the requester does not have permission to view the project.
+	Name string `json:"name"`
+	// User's public email.
+	PublicEmail string `json:"publicEmail"`
+}
+
+// GetName returns User.Name, and is useful for accessing the field via an interface.
+func (v *User) GetName() string { return v.Name }
+
+// GetPublicEmail returns User.PublicEmail, and is useful for accessing the field via an interface.
+func (v *User) GetPublicEmail() string { return v.PublicEmail }
+
+// __GetMergeRequestInput is used internally by genqlient
+type __GetMergeRequestInput struct {
+	Id string `json:"id"`
+}
+
+// GetId returns __GetMergeRequestInput.Id, and is useful for accessing the field via an interface.
+func (v *__GetMergeRequestInput) GetId() string { return v.Id }
+
+// __ListMergeRequestsInput is used internally by genqlient
+type __ListMergeRequestsInput struct {
 	Project string            `json:"project"`
 	State   MergeRequestState `json:"state"`
 }
 
-// GetProject returns __GetProjectInput.Project, and is useful for accessing the field via an interface.
-func (v *__GetProjectInput) GetProject() string { return v.Project }
+// GetProject returns __ListMergeRequestsInput.Project, and is useful for accessing the field via an interface.
+func (v *__ListMergeRequestsInput) GetProject() string { return v.Project }
 
-// GetState returns __GetProjectInput.State, and is useful for accessing the field via an interface.
-func (v *__GetProjectInput) GetState() MergeRequestState { return v.State }
+// GetState returns __ListMergeRequestsInput.State, and is useful for accessing the field via an interface.
+func (v *__ListMergeRequestsInput) GetState() MergeRequestState { return v.State }
 
-func GetProject(
+func GetCurrentUser(
 	ctx context.Context,
 	client graphql.Client,
-	project string,
-	state MergeRequestState,
-) (*GetProjectResponse, error) {
+) (*GetCurrentUserResponse, error) {
 	req := &graphql.Request{
-		OpName: "GetProject",
+		OpName: "GetCurrentUser",
 		Query: `
-query GetProject ($project: ID!, $state: MergeRequestState!) {
-	project(fullPath: $project) {
-		... Project
+query GetCurrentUser {
+	currentUser {
+		name
+		publicEmail
 	}
 }
-fragment Project on Project {
-	id
-	mergeRequests(state: $state, sort: UPDATED_ASC) {
-		nodes {
-			... MergeRequest
-		}
+`,
+	}
+	var err error
+
+	var data GetCurrentUserResponse
+	resp := &graphql.Response{Data: &data}
+
+	err = client.MakeRequest(
+		ctx,
+		req,
+		resp,
+	)
+
+	return &data, err
+}
+
+func GetMergeRequest(
+	ctx context.Context,
+	client graphql.Client,
+	id string,
+) (*GetMergeRequestResponse, error) {
+	req := &graphql.Request{
+		OpName: "GetMergeRequest",
+		Query: `
+query GetMergeRequest ($id: MergeRequestID!) {
+	mergeRequest(id: $id) {
+		... MergeRequest
 	}
 }
 fragment MergeRequest on MergeRequest {
 	id
 	iid
 	title
+	author {
+		name
+	}
 	diffHeadSha
-	draft
-	mergeStatusEnum
-	sourceBranch
-	targetBranch
 	diffStats {
 		path
 	}
+	draft
+	mergeStatusEnum
+	sourceBranch
+	sourceProjectId
+	sourceProject {
+		httpUrlToRepo
+	}
+	targetBranch
+	targetProject {
+		httpUrlToRepo
+	}
+	webUrl
 	commits {
 		nodes {
 			... Commit
@@ -387,14 +518,117 @@ fragment Pipeline on Pipeline {
 	status
 }
 `,
-		Variables: &__GetProjectInput{
+		Variables: &__GetMergeRequestInput{
+			Id: id,
+		},
+	}
+	var err error
+
+	var data GetMergeRequestResponse
+	resp := &graphql.Response{Data: &data}
+
+	err = client.MakeRequest(
+		ctx,
+		req,
+		resp,
+	)
+
+	return &data, err
+}
+
+func ListMergeRequests(
+	ctx context.Context,
+	client graphql.Client,
+	project string,
+	state MergeRequestState,
+) (*ListMergeRequestsResponse, error) {
+	req := &graphql.Request{
+		OpName: "ListMergeRequests",
+		Query: `
+query ListMergeRequests ($project: ID!, $state: MergeRequestState!) {
+	project(fullPath: $project) {
+		... Project
+	}
+}
+fragment Project on Project {
+	id
+	mergeRequests(state: $state, sort: UPDATED_ASC) {
+		nodes {
+			... MergeRequest
+		}
+	}
+}
+fragment MergeRequest on MergeRequest {
+	id
+	iid
+	title
+	author {
+		name
+	}
+	diffHeadSha
+	diffStats {
+		path
+	}
+	draft
+	mergeStatusEnum
+	sourceBranch
+	sourceProjectId
+	sourceProject {
+		httpUrlToRepo
+	}
+	targetBranch
+	targetProject {
+		httpUrlToRepo
+	}
+	webUrl
+	commits {
+		nodes {
+			... Commit
+		}
+	}
+	labels {
+		nodes {
+			... Label
+		}
+	}
+	notes {
+		nodes {
+			... Note
+		}
+	}
+}
+fragment Commit on Commit {
+	id
+	authoredDate
+	message
+	sha
+	title
+	pipelines {
+		nodes {
+			... Pipeline
+		}
+	}
+}
+fragment Label on Label {
+	title
+}
+fragment Note on Note {
+	body
+	updatedAt
+}
+fragment Pipeline on Pipeline {
+	sha
+	status
+}
+`,
+		Variables: &__ListMergeRequestsInput{
 			Project: project,
 			State:   state,
 		},
 	}
 	var err error
 
-	var data GetProjectResponse
+	var data ListMergeRequestsResponse
 	resp := &graphql.Response{Data: &data}
 
 	err = client.MakeRequest(

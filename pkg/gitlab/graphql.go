@@ -7,8 +7,9 @@ const (
 fragment Pipeline on Pipeline {
   sha
   status
-}
+}`
 
+	_ = `# @genqlient
 fragment Commit on Commit {
   id
   authoredDate
@@ -21,29 +22,43 @@ fragment Commit on Commit {
       ...Pipeline
     }
   }
-}
+}`
 
+	_ = `# @genqlient
 fragment Label on Label {
   title
-}
+}`
 
+	_ = `# @genqlient
 fragment Note on Note {
   body
   updatedAt
-}
+}`
 
+	_ = `# @genqlient
 fragment MergeRequest on MergeRequest {
   id
   iid
   title
+  author {
+    name
+  }
   diffHeadSha
-  draft
-  mergeStatusEnum
-  sourceBranch
-  targetBranch
   diffStats {
     path
   }
+  draft
+  mergeStatusEnum
+  sourceBranch
+  sourceProjectId
+  sourceProject {
+    httpUrlToRepo
+  }
+  targetBranch
+  targetProject {
+    httpUrlToRepo
+  }
+  webUrl
   commits {
     # @genqlient(flatten: true)
     nodes {
@@ -62,8 +77,9 @@ fragment MergeRequest on MergeRequest {
       ...Note
     }
   }
-}
+ }`
 
+	_ = `# @genqlient
 fragment Project on Project {
   id
   mergeRequests(state: $state, sort: UPDATED_ASC) {
@@ -72,12 +88,30 @@ fragment Project on Project {
       ...MergeRequest
     }
   }
-}
+}`
 
-query GetProject($project: ID!, $state: MergeRequestState!) {
+	_ = `# @genqlient
+query ListMergeRequests($project: ID!, $state: MergeRequestState!) {
   # @genqlient(flatten: true)
   project(fullPath: $project) {
     ...Project
+  }
+}`
+
+	_ = `# @genqlient
+query GetCurrentUser {
+  # @genqlient(typename: User)
+  currentUser{
+    name
+    publicEmail
+  }
+}`
+
+	_ = `# @genqlient
+query GetMergeRequest($id: MergeRequestID!) {
+  # @genqlient(flatten: true)
+  mergeRequest(id: $id) {
+    ...MergeRequest
   }
 }`
 )

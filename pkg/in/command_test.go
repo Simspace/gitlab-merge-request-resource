@@ -3,6 +3,7 @@ package in_test
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -11,11 +12,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Khan/genqlient/graphql"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/simspace/gitlab-merge-request-resource/pkg/gitlab"
 	"github.com/simspace/gitlab-merge-request-resource/pkg/in"
 	"github.com/simspace/gitlab-merge-request-resource/pkg/models"
-	"github.com/xanzy/go-gitlab"
 )
 
 var _ = Describe("In", func() {
@@ -46,10 +48,10 @@ var _ = Describe("In", func() {
 		mux = http.NewServeMux()
 		server = httptest.NewServer(mux)
 		root, _ = url.Parse(server.URL)
-		context, _ := url.Parse("/api/v4")
+		context, _ := url.Parse("/api/graphql")
 		base := root.ResolveReference(context)
-		client, _ := gitlab.NewClient("$", gitlab.WithBaseURL(base.String()))
-		command = in.NewCommand(client).WithRunner(newMockRunner(destination))
+		client := graphql.NewClient(base.String(), nil)
+		command = in.NewCommand(&client).WithRunner(newMockRunner(destination))
 
 	})
 
@@ -61,67 +63,60 @@ var _ = Describe("In", func() {
 	Describe("Run", func() {
 
 		BeforeEach(func() {
-			mux.HandleFunc("/api/v4/projects/namespace/project/merge_requests/1/changes", func(w http.ResponseWriter, r *http.Request) {
-				mr := gitlab.MergeRequest{
-					IID:             88,
-					ID:              99,
-					SHA:             "abc",
-					ProjectID:       42,
-					TargetProjectID: 42,
-					SourceProjectID: 42,
-					SourceBranch:    "source-branch",
-					TargetBranch:    "target-branch",
-					Author:          &gitlab.BasicUser{Name: "Tester"},
-					Changes: changes{
-						{
-							OldPath:     "/foo",
-							NewPath:     "/foo",
-							AMode:       "",
-							BMode:       "",
-							Diff:        "",
-							NewFile:     false,
-							RenamedFile: false,
-							DeletedFile: false,
+			mux.HandleFunc("/api/graphql", func(w http.ResponseWriter, r *http.Request) {
+				project, _ := url.Parse("namespace/project.git")
+				uri := root.ResolveReference(project)
+				mrResponse := gitlab.GetMergeRequestResponse{
+					MergeRequest: gitlab.MergeRequest{
+						Iid:         "88",
+						Id:          "99",
+						Author:      gitlab.MergeRequestAuthor{Name: "Tester"},
+						DiffHeadSha: "abc",
+						DiffStats: []gitlab.MergeRequestDiffStats{
+							{
+								Path: "/foo",
+							},
+							{
+								Path: "/bar",
+							},
 						},
-						{
-							OldPath:     "/bar",
-							NewPath:     "/bar",
-							AMode:       "",
-							BMode:       "",
-							Diff:        "",
-							NewFile:     false,
-							RenamedFile: false,
-							DeletedFile: false,
+						SourceBranch: "source-branch",
+						SourceProject: gitlab.MergeRequestSourceProject{
+							HttpUrlToRepo: uri.String(),
+						},
+						TargetBranch: "target-branch",
+						TargetProject: gitlab.MergeRequestTargetProject{
+							HttpUrlToRepo: uri.String(),
+						},
+						Commits: gitlab.MergeRequestCommitsCommitConnection{
+							Nodes: []gitlab.Commit{
+								{
+									Sha:          "abc",
+									AuthoredDate: t,
+								},
+							},
 						},
 					},
 				}
-				output, _ := json.Marshal(mr)
-				w.Header().Set("content-type", "application/json")
-				w.WriteHeader(http.StatusOK)
-				w.Write(output)
-			})
-			mux.HandleFunc("/api/v4/projects/42", func(w http.ResponseWriter, r *http.Request) {
-				project, _ := url.Parse("namespace/project.git")
-				uri := root.ResolveReference(project)
-				mr := gitlab.Project{HTTPURLToRepo: uri.String()}
-				output, _ := json.Marshal(mr)
-				w.Header().Set("content-type", "application/json")
-				w.WriteHeader(http.StatusOK)
-				w.Write(output)
-			})
-			mux.HandleFunc("/api/v4/projects/42/repository/commits/abc", func(w http.ResponseWriter, r *http.Request) {
-				commit := gitlab.Commit{CommittedDate: &t}
-				output, _ := json.Marshal(commit)
-				w.Header().Set("content-type", "application/json")
-				w.WriteHeader(http.StatusOK)
-				w.Write(output)
-			})
-			mux.HandleFunc("/api/v4/user", func(w http.ResponseWriter, r *http.Request) {
-				user := gitlab.User{
-					Username: "test",
-					Email:    "test@example.com",
+				userResponse := gitlab.GetCurrentUserResponse{
+					CurrentUser: gitlab.User{
+						Name:        "testuser",
+						PublicEmail: "tester@test.com",
+					},
 				}
-				output, _ := json.Marshal(user)
+
+				body, _ := ioutil.ReadAll(r.Body)
+				graphqlReq := graphql.Request{}
+				_ = json.Unmarshal(body, &graphqlReq)
+
+				var data interface{}
+
+				if graphqlReq.OpName == "GetMergeRequest" {
+					data = mrResponse
+				} else {
+					data = userResponse
+				}
+				output, _ := json.Marshal(graphql.Response{Data: data})
 				w.Header().Set("content-type", "application/json")
 				w.WriteHeader(http.StatusOK)
 				w.Write(output)
@@ -139,7 +134,7 @@ var _ = Describe("In", func() {
 						URI:          uri.String(),
 						PrivateToken: "$",
 					},
-					Version: models.Version{ID: 1},
+					Version: models.Version{ID: "git://gitlab/MergeRequest/1"},
 				}
 
 				response, err := command.Run(destination, request)
@@ -162,7 +157,7 @@ var _ = Describe("In", func() {
 						URI:          uri.String(),
 						PrivateToken: "$",
 					},
-					Version: models.Version{ID: 1},
+					Version: models.Version{ID: "git://gitlab/MergeRequest/1"},
 				}
 
 				_, err := command.Run(destination, request)

@@ -24,14 +24,10 @@ func NewCommand(client *graphql.Client, clientv4 *gitlabv4.Client) *Command {
 	}
 }
 
-func (command *Command) GetClient() graphql.Client {
-	return *command.client
-}
-
 func (command *Command) Run(request Request) (Response, error) {
 	labels := request.Source.Labels
 
-	resp, err := gitlab.GetProject(context.Background(), command.GetClient(), request.Source.GetProjectPath(), gitlab.MergeRequestStateOpened)
+	resp, err := gitlab.ListMergeRequests(context.Background(), *command.client, request.Source.GetProjectPath(), gitlab.MergeRequestStateOpened)
 	if err != nil {
 		return Response{}, err
 	}
@@ -75,7 +71,10 @@ func (command *Command) Run(request Request) (Response, error) {
 
 		var updatedAt *time.Time
 
-		commit := getLatestCommit(&mr)
+		commit, err := mr.GetLatestCommit()
+		if err != nil {
+			return Response{}, err
+		}
 
 		if strings.Contains(commit.Title, "[skip ci]") || strings.Contains(commit.Message, "[skip ci]") {
 			continue
@@ -108,24 +107,14 @@ func (command *Command) Run(request Request) (Response, error) {
 			_, _, _ = command.clientv4.Commits.SetCommitStatus(projID, commit.GetSha(), &options)
 		}
 
-		IIDStr, err := strconv.Atoi(mr.Iid)
+		IIDInt, err := strconv.Atoi(mr.Iid)
 		if err != nil {
 			return Response{}, err
 		}
-		versions = append(versions, models.Version{ID: IIDStr, UpdatedAt: updatedAt})
+		versions = append(versions, models.Version{ID: mr.Id, IID: IIDInt, UpdatedAt: updatedAt})
 	}
 
 	return versions, nil
-}
-
-func getLatestCommit(mr *gitlab.MergeRequest) gitlab.Commit {
-	for _, commit := range mr.GetCommits().Nodes {
-		if commit.Sha != mr.DiffHeadSha {
-			continue
-		}
-		return commit
-	}
-	return gitlab.Commit{}
 }
 
 func stripID(s string) string {

@@ -2,11 +2,12 @@ package main
 
 import (
 	"encoding/json"
+	"net/http"
 	"os"
 
+	"github.com/Khan/genqlient/graphql"
 	"github.com/simspace/gitlab-merge-request-resource/pkg/common"
 	"github.com/simspace/gitlab-merge-request-resource/pkg/in"
-	"github.com/xanzy/go-gitlab"
 )
 
 func main() {
@@ -21,12 +22,15 @@ func main() {
 	var request in.Request
 	inputRequest(&request)
 
-	client, err := gitlab.NewClient(request.Source.PrivateToken, gitlab.WithHTTPClient(common.GetDefaultClient(request.Source.Insecure)), gitlab.WithBaseURL(request.Source.GetBaseURL()))
-	if err != nil {
-		common.Fatal("initializing gitlab client", err)
+	httpClient := http.Client{
+		Transport: &common.AuthedTransport{
+			Key:     request.Source.PrivateToken,
+			Wrapped: http.DefaultTransport,
+		},
 	}
+	client := graphql.NewClient("https://gitlab.com/api/graphql", &httpClient)
 
-	command := in.NewCommand(client)
+	command := in.NewCommand(&client)
 	response, err := command.Run(destination, request)
 	if err != nil {
 		common.Fatal("running command", err)

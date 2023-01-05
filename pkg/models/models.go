@@ -31,7 +31,8 @@ type Source struct {
 }
 
 type Version struct {
-	ID        int        `json:"id,string"`
+	ID        string     `json:"id,string"`
+	IID       int        `json:"iid,string"`
 	UpdatedAt *time.Time `json:"updated_at"`
 }
 

@@ -54,7 +54,7 @@ var _ = Describe("Check", func() {
 
 			BeforeEach(func() {
 				mux.HandleFunc("/api/graphql", func(w http.ResponseWriter, r *http.Request) {
-					projResp := gitlab.GetProjectResponse{
+					projResp := gitlab.ListMergeRequestsResponse{
 						Project: gitlab.Project{
 							Id: "gid://gitlab/Project/1",
 							MergeRequests: gitlab.ProjectMergeRequestsMergeRequestConnection{
@@ -111,7 +111,7 @@ var _ = Describe("Check", func() {
 				response, err := command.Run(request)
 				Expect(err).Should(BeNil())
 				Expect(len(response)).To(Equal(1))
-				Expect(response[0].ID).To(Equal(88))
+				Expect(response[0].IID).To(Equal(88))
 				Expect(response[0].UpdatedAt).To(Equal(&t))
 			})
 		})
@@ -145,7 +145,7 @@ var _ = Describe("Check", func() {
 			BeforeEach(func() {
 				updTime, _ = time.Parse(time.RFC3339, "2023-01-01T08:30:00Z")
 				mux.HandleFunc("/api/graphql", func(w http.ResponseWriter, r *http.Request) {
-					projResp := gitlab.GetProjectResponse{
+					projResp := gitlab.ListMergeRequestsResponse{
 						Project: gitlab.Project{
 							Id: "gid://gitlab/Project/1",
 							MergeRequests: gitlab.ProjectMergeRequestsMergeRequestConnection{
@@ -215,7 +215,7 @@ var _ = Describe("Check", func() {
 			BeforeEach(func() {
 				updTime, _ = time.Parse(time.RFC3339, "2023-01-01T08:30:00Z")
 				mux.HandleFunc("/api/graphql", func(w http.ResponseWriter, r *http.Request) {
-					projResp := gitlab.GetProjectResponse{
+					projResp := gitlab.ListMergeRequestsResponse{
 						Project: gitlab.Project{
 							Id: "gid://gitlab/Project/1",
 							MergeRequests: gitlab.ProjectMergeRequestsMergeRequestConnection{
@@ -294,7 +294,7 @@ var _ = Describe("Check", func() {
 				response, err := command.Run(request)
 				Expect(err).Should(BeNil())
 				Expect(len(response)).To(Equal(1))
-				Expect(response[0].ID).To(Equal(89))
+				Expect(response[0].IID).To(Equal(89))
 			})
 		})
 	})

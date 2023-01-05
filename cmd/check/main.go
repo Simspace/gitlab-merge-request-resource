@@ -11,25 +11,15 @@ import (
 	"github.com/xanzy/go-gitlab"
 )
 
-type authedTransport struct {
-	key     string
-	wrapped http.RoundTripper
-}
-
-func (t *authedTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-	req.Header.Set("Authorization", "bearer "+t.key)
-	return t.wrapped.RoundTrip(req)
-}
-
 func main() {
 
 	var request check.Request
 	inputRequest(&request)
 
 	httpClient := http.Client{
-		Transport: &authedTransport{
-			key:     request.Source.PrivateToken,
-			wrapped: http.DefaultTransport,
+		Transport: &common.AuthedTransport{
+			Key:     request.Source.PrivateToken,
+			Wrapped: http.DefaultTransport,
 		},
 	}
 	client := graphql.NewClient("https://gitlab.com/api/graphql", &httpClient)
