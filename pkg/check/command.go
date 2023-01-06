@@ -2,7 +2,6 @@ package check
 
 import (
 	"context"
-	"strconv"
 	"strings"
 	"time"
 
@@ -107,11 +106,7 @@ func (command *Command) Run(request Request) (Response, error) {
 			_, _, _ = command.clientv4.Commits.SetCommitStatus(projID, commit.GetSha(), &options)
 		}
 
-		IIDInt, err := strconv.Atoi(mr.Iid)
-		if err != nil {
-			return Response{}, err
-		}
-		versions = append(versions, models.Version{ID: mr.Id, IID: IIDInt, UpdatedAt: updatedAt})
+		versions = append(versions, models.Version{ID: mr.Id, IID: mr.Iid, UpdatedAt: updatedAt})
 	}
 
 	return versions, nil

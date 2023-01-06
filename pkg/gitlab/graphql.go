@@ -26,6 +26,7 @@ fragment Commit on Commit {
 
 	_ = `# @genqlient
 fragment Label on Label {
+  id
   title
 }`
 
@@ -89,6 +90,17 @@ fragment Project on Project {
     }
   }
 }`
+	_ = `# @genqlient
+query ListLabels($project: ID!) {
+  project(fullPath: $project) {
+    labels {
+      # @genqlient(flatten: true)
+      nodes {
+        ...Label
+      }
+    }
+  }
+}`
 
 	_ = `# @genqlient
 query ListMergeRequests($project: ID!, $state: MergeRequestState!) {
@@ -112,6 +124,34 @@ query GetMergeRequest($id: MergeRequestID!) {
   # @genqlient(flatten: true)
   mergeRequest(id: $id) {
     ...MergeRequest
+  }
+}`
+
+	_ = `# @genqlient
+# @genqlient(for: "CreateNoteInput.confidential", omitempty: true)
+# @genqlient(for: "CreateNoteInput.clientMutationId", omitempty: true)
+# @genqlient(for: "CreateNoteInput.discussionId", omitempty: true)
+# @genqlient(for: "CreateNoteInput.internal", omitempty: true)
+mutation CreateNote(
+  $input: CreateNoteInput!
+) {
+  createNote(input: $input) {
+    errors
+  }
+}`
+
+	_ = `# @genqlient
+# @genqlient(for: "MergeRequestSetLabelsInput.clientMutationId", omitempty: true)
+# @genqlient(for: "MergeRequestSetLabelsInput.operationMode", omitempty: true)
+mutation SetMergeRequestLabels(
+  $input: MergeRequestSetLabelsInput!
+) {
+  mergeRequestSetLabels(input: $input) {
+    errors
+    # @genqlient(flatten: true)
+    mergeRequest {
+      ...MergeRequest
+    }
   }
 }`
 )

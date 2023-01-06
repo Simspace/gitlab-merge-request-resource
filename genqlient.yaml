@@ -6,7 +6,13 @@ operations:
 generated: pkg/gitlab/generated.go
 package: gitlab
 bindings:
+  DiscussionID:
+    type: string
+  LabelID:
+    type: string
   MergeRequestID:
+    type: string
+  NoteableID:
     type: string
   Time:
     type: time.Time

@@ -1,6 +1,9 @@
 package gitlab
 
-import "errors"
+import (
+	"errors"
+	"regexp"
+)
 
 // GetLatestCommit returns the commit matching the HEAD SHA of the parent merge request
 func (mr *MergeRequest) GetLatestCommit() (Commit, error) {
@@ -11,4 +14,10 @@ func (mr *MergeRequest) GetLatestCommit() (Commit, error) {
 		return commit, nil
 	}
 	return Commit{}, errors.New("could not find latest commit")
+}
+
+// GetProjectPath extracts project path from URI (repository URL).
+func (mr *MergeRequest) GetProjectPath() string {
+	r, _ := regexp.Compile("(https?|ssh)://([^/]*)/(.*)\\.git$")
+	return r.FindStringSubmatch(mr.SourceProject.HttpUrlToRepo)[3]
 }
