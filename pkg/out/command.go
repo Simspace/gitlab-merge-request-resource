@@ -7,7 +7,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/Khan/genqlient/graphql"
 	"github.com/simspace/gitlab-merge-request-resource/pkg/gitlab"
@@ -62,11 +61,16 @@ func (command *Command) Run(destination string, request Request) (Response, erro
 		return Response{}, err
 	}
 
+	commit, err := mr.GetLatestCommit()
+	if err != nil {
+		return Response{}, err
+	}
+
 	response := Response{
 		Version: models.Version{
 			ID:        mr.Id,
 			IID:       mr.Iid,
-			UpdatedAt: &time.Time{},
+			UpdatedAt: &commit.AuthoredDate,
 		},
 		Metadata: buildMetadata(&mr),
 	}

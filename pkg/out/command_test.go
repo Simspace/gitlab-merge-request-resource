@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"time"
 
 	"github.com/Khan/genqlient/graphql"
 	. "github.com/onsi/ginkgo/v2"
@@ -64,6 +65,14 @@ var _ = Describe("Out", func() {
 				DiffHeadSha:     "abc",
 				SourceProjectId: 1,
 				Author:          gitlab.MergeRequestAuthor{Name: "john"},
+				Commits: gitlab.MergeRequestCommitsCommitConnection{
+					Nodes: []gitlab.Commit{
+						{
+							Sha:          "abc",
+							AuthoredDate: time.Time{},
+						},
+					},
+				},
 			}
 			content, _ := json.Marshal(mr)
 
@@ -124,6 +133,14 @@ var _ = Describe("Out", func() {
 							Iid:         "42",
 							DiffHeadSha: "abc",
 							Author:      gitlab.MergeRequestAuthor{Name: "john"},
+							Commits: gitlab.MergeRequestCommitsCommitConnection{
+								Nodes: []gitlab.Commit{
+									{
+										Sha:          "abc",
+										AuthoredDate: time.Time{},
+									},
+								},
+							},
 							Labels: gitlab.MergeRequestLabelsLabelConnection{
 								Nodes: []gitlab.Label{
 									{
@@ -156,8 +173,9 @@ var _ = Describe("Out", func() {
 			})
 
 			mr := gitlab.MergeRequest{
-				Id:  "gid://MergeRequest/1",
-				Iid: "42",
+				Id:          "gid://MergeRequest/1",
+				Iid:         "42",
+				DiffHeadSha: "abc",
 				SourceProject: gitlab.MergeRequestSourceProject{
 					HttpUrlToRepo: "https://gitlab.com/namespace/project.git",
 				},
@@ -170,6 +188,14 @@ var _ = Describe("Out", func() {
 					},
 				},
 				Author: gitlab.MergeRequestAuthor{Name: "john"},
+				Commits: gitlab.MergeRequestCommitsCommitConnection{
+					Nodes: []gitlab.Commit{
+						{
+							Sha:          "abc",
+							AuthoredDate: time.Time{},
+						},
+					},
+				},
 			}
 			content, _ := json.Marshal(mr)
 
@@ -211,11 +237,20 @@ var _ = Describe("Out", func() {
 			mr := gitlab.MergeRequest{
 				Id:              "gid://MergeRequest/1",
 				Iid:             "42",
+				DiffHeadSha:     "abc",
 				SourceProjectId: 1,
 				Labels: gitlab.MergeRequestLabelsLabelConnection{
 					Nodes: []gitlab.Label{},
 				},
 				Author: gitlab.MergeRequestAuthor{Name: "john"},
+				Commits: gitlab.MergeRequestCommitsCommitConnection{
+					Nodes: []gitlab.Commit{
+						{
+							Sha:          "abc",
+							AuthoredDate: time.Time{},
+						},
+					},
+				},
 			}
 			content, _ := json.Marshal(mr)
 
