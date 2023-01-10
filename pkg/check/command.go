@@ -34,10 +34,6 @@ func (command *Command) Run(request Request) (Response, error) {
 	versions := make([]models.Version, 0)
 
 	for _, mr := range resp.Project.GetMergeRequests().Nodes {
-		if mr.DiffHeadSha == "" {
-			continue
-		}
-
 		if request.Source.SourceBranch != "" && mr.SourceBranch != request.Source.SourceBranch {
 			continue
 		}

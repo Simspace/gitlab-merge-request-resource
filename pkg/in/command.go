@@ -138,6 +138,9 @@ func (command *Command) Run(destination string, request Request) (Response, erro
 	}
 
 	err = os.WriteFile(".git/resource/changed_files", []byte(strings.Join(changedFiles, "\n")), 0644)
+	if err != nil {
+		return Response{}, err
+	}
 
 	response := Response{Version: request.Version, Metadata: buildMetadata(mr, commit)}
 

@@ -8,7 +8,7 @@ import (
 	"github.com/Khan/genqlient/graphql"
 	"github.com/simspace/gitlab-merge-request-resource/pkg/check"
 	"github.com/simspace/gitlab-merge-request-resource/pkg/common"
-	"github.com/xanzy/go-gitlab"
+	gitlabv4 "github.com/xanzy/go-gitlab"
 )
 
 func main() {
@@ -23,7 +23,7 @@ func main() {
 		},
 	}
 	client := graphql.NewClient("https://gitlab.com/api/graphql", &httpClient)
-	clientv4, err := gitlab.NewClient(request.Source.PrivateToken, gitlab.WithHTTPClient(common.GetDefaultClient(request.Source.Insecure)), gitlab.WithBaseURL(request.Source.GetBaseURL()))
+	clientv4, err := gitlabv4.NewClient(request.Source.PrivateToken, gitlabv4.WithHTTPClient(common.GetDefaultClient(request.Source.Insecure)), gitlabv4.WithBaseURL(request.Source.GetBaseURL()))
 	if err != nil {
 		common.Fatal("initializing gitlab client", err)
 	}

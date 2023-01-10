@@ -105,6 +105,10 @@ func (command *Command) updateLabels(request Request, mr gitlab.MergeRequest) (g
 	if request.Params.Labels != nil {
 		labelMap := map[string]string{}
 		lresp, err := gitlab.ListLabels(context.Background(), *command.client, mr.GetProjectPath())
+		if err != nil {
+			return gitlab.MergeRequest{}, err
+		}
+
 		for _, label := range lresp.Project.Labels.Nodes {
 			labelMap[label.Title] = label.Id
 		}
