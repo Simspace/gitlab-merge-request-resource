@@ -84,73 +84,78 @@ func (command *Command) createNote(destination string, request Request, mr gitla
 		return err
 	}
 
-	if body != "" {
-		in := gitlab.CreateNoteInput{
-			Body:                    body,
-			MergeRequestDiffHeadSha: mr.DiffHeadSha,
-			NoteableId:              mr.Id,
-		}
-		_, err = gitlab.CreateNote(context.Background(), *command.client, in)
-		if err != nil {
-			return err
-		}
+	if body == "" {
+		return nil
 	}
+
+	in := gitlab.CreateNoteInput{
+		Body:                    body,
+		MergeRequestDiffHeadSha: mr.DiffHeadSha,
+		NoteableId:              mr.Id,
+	}
+	_, err = gitlab.CreateNote(context.Background(), *command.client, in)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
 // updateLabels appends labels to a merge request, if labels are supplied,
 // and returns the updated MergeRequest object from the server
 func (command *Command) updateLabels(request Request, mr gitlab.MergeRequest) (gitlab.MergeRequest, error) {
-	updMr := mr
-	if request.Params.Labels != nil {
-		labelMap := map[string]string{}
-		lresp, err := gitlab.ListLabels(context.Background(), *command.client, mr.GetProjectPath())
-		if err != nil {
-			return gitlab.MergeRequest{}, err
-		}
-
-		for _, label := range lresp.Project.Labels.Nodes {
-			labelMap[label.Title] = label.Id
-		}
-		labelIds := []string{}
-		for _, label := range request.Params.Labels {
-			if id, found := labelMap[label]; found {
-				labelIds = append(labelIds, id)
-			} else {
-				return gitlab.MergeRequest{}, fmt.Errorf("could not find an existing label for %s", label)
-			}
-		}
-		in := gitlab.MergeRequestSetLabelsInput{
-			Iid:           mr.Iid,
-			LabelIds:      labelIds,
-			OperationMode: gitlab.MutationOperationModeAppend,
-			ProjectPath:   mr.GetProjectPath(),
-		}
-		resp, err := gitlab.SetMergeRequestLabels(context.Background(), *command.client, in)
-		if err != nil {
-			return gitlab.MergeRequest{}, err
-		}
-
-		updMr = resp.MergeRequestSetLabels.GetMergeRequest()
+	if request.Params.Labels == nil {
+		return mr, nil
 	}
-	return updMr, nil
+
+	labelMap := map[string]string{}
+	lresp, err := gitlab.ListLabels(context.Background(), *command.client, mr.GetProjectPath())
+	if err != nil {
+		return gitlab.MergeRequest{}, err
+	}
+
+	for _, label := range lresp.Project.Labels.Nodes {
+		labelMap[label.Title] = label.Id
+	}
+	labelIds := []string{}
+	for _, label := range request.Params.Labels {
+		if id, found := labelMap[label]; found {
+			labelIds = append(labelIds, id)
+		} else {
+			return gitlab.MergeRequest{}, fmt.Errorf("could not find an existing label for %s", label)
+		}
+	}
+	in := gitlab.MergeRequestSetLabelsInput{
+		Iid:           mr.Iid,
+		LabelIds:      labelIds,
+		OperationMode: gitlab.MutationOperationModeAppend,
+		ProjectPath:   mr.GetProjectPath(),
+	}
+	resp, err := gitlab.SetMergeRequestLabels(context.Background(), *command.client, in)
+	if err != nil {
+		return gitlab.MergeRequest{}, err
+	}
+
+	return resp.MergeRequestSetLabels.GetMergeRequest(), nil
 }
 
 func (command *Command) updateCommitStatus(request Request, mr gitlab.MergeRequest) error {
-	if request.Params.Status != "" {
-		state := gitlabv4.BuildState(gitlabv4.BuildStateValue(request.Params.Status))
-		target := request.Source.GetTargetURL()
-		name := request.Source.GetPipelineName()
-		options := gitlabv4.SetCommitStatusOptions{
-			Name:      &name,
-			TargetURL: &target,
-			State:     *state,
-		}
+	if request.Params.Status == "" {
+		return nil
+	}
 
-		_, _, err := command.clientv4.Commits.SetCommitStatus(mr.SourceProjectId, mr.DiffHeadSha, &options)
-		if err != nil {
-			return err
-		}
+	state := gitlabv4.BuildState(gitlabv4.BuildStateValue(request.Params.Status))
+	target := request.Source.GetTargetURL()
+	name := request.Source.GetPipelineName()
+	options := gitlabv4.SetCommitStatusOptions{
+		Name:      &name,
+		TargetURL: &target,
+		State:     *state,
+	}
+
+	_, _, err := command.clientv4.Commits.SetCommitStatus(mr.SourceProjectId, mr.DiffHeadSha, &options)
+	if err != nil {
+		return err
 	}
 	return nil
 }
