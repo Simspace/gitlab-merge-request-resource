@@ -128,7 +128,6 @@ query GetMergeRequest($id: MergeRequestID!) {
 }`
 
 	_ = `# @genqlient
-# @genqlient(for: "CreateNoteInput.confidential", omitempty: true)
 # @genqlient(for: "CreateNoteInput.clientMutationId", omitempty: true)
 # @genqlient(for: "CreateNoteInput.discussionId", omitempty: true)
 # @genqlient(for: "CreateNoteInput.internal", omitempty: true)
