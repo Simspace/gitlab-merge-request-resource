@@ -1,21 +1,25 @@
 package in
 
 import (
+	"context"
 	"encoding/json"
-	"github.com/samcontesse/gitlab-merge-request-resource/pkg"
-	"github.com/xanzy/go-gitlab"
 	"net/url"
 	"os"
 	"strconv"
+	"strings"
+
+	"github.com/Khan/genqlient/graphql"
+	"github.com/simspace/gitlab-merge-request-resource/pkg/gitlab"
+	"github.com/simspace/gitlab-merge-request-resource/pkg/models"
 )
 
 type Command struct {
-	client *gitlab.Client
+	client *graphql.Client
 	runner GitRunner
 	agent  AgentRunner
 }
 
-func NewCommand(client *gitlab.Client) *Command {
+func NewCommand(client *graphql.Client) *Command {
 	return &Command{
 		client,
 		NewRunner(),
@@ -34,34 +38,34 @@ func (command *Command) Run(destination string, request Request) (Response, erro
 		return Response{}, err
 	}
 
-	user, _, err := command.client.Users.CurrentUser()
-	err = command.runner.Run("config", "--global", "user.email", user.Email)
+	user, err := gitlab.GetCurrentUser(context.Background(), *command.client)
+	err = command.runner.Run("config", "--global", "user.email", user.CurrentUser.GetPublicEmail())
 	if err != nil {
 		return Response{}, err
 	}
 
-	err = command.runner.Run("config", "--global", "user.name", user.Name)
+	err = command.runner.Run("config", "--global", "user.name", user.CurrentUser.GetName())
 	if err != nil {
 		return Response{}, err
 	}
 
-	mr, _, err := command.client.MergeRequests.GetMergeRequest(request.Source.GetProjectPath(), request.Version.ID, &gitlab.GetMergeRequestsOptions{})
+	resp, err := gitlab.GetMergeRequest(context.Background(), *command.client, request.Version.ID)
 	if err != nil {
 		return Response{}, err
 	}
 
-	mr.UpdatedAt = request.Version.UpdatedAt
+	mr := resp.GetMergeRequest()
 
-	target, err := command.createRepositoryUrl(mr.TargetProjectID, request.Source.PrivateToken)
+	target, err := command.createRepositoryURL(mr.GetTargetProject().HttpUrlToRepo, request.Source.PrivateToken)
 	if err != nil {
 		return Response{}, err
 	}
-	source, err := command.createRepositoryUrl(mr.SourceProjectID, request.Source.PrivateToken)
+	source, err := command.createRepositoryURL(mr.GetSourceProject().HttpUrlToRepo, request.Source.PrivateToken)
 	if err != nil {
 		return Response{}, err
 	}
 
-	commit, _, err := command.client.Commits.GetCommit(mr.SourceProjectID, mr.SHA)
+	commit, err := mr.GetLatestCommit()
 	if err != nil {
 		return Response{}, err
 	}
@@ -100,7 +104,7 @@ func (command *Command) Run(destination string, request Request) (Response, erro
 		return Response{}, err
 	}
 
-	err = command.runner.Run("merge", "--no-ff", "--no-commit", mr.SHA)
+	err = command.runner.Run("merge", "--no-ff", "--no-commit", mr.DiffHeadSha)
 	if err != nil {
 		return Response{}, err
 	}
@@ -123,18 +127,28 @@ func (command *Command) Run(destination string, request Request) (Response, erro
 		return Response{}, err
 	}
 
+	err = os.Mkdir(".git/resource", 0755)
+	if err != nil {
+		return Response{}, err
+	}
+
+	var changedFiles []string
+	for _, change := range mr.DiffStats {
+		changedFiles = append(changedFiles, change.Path)
+	}
+
+	err = os.WriteFile(".git/resource/changed_files", []byte(strings.Join(changedFiles, "\n")), 0644)
+	if err != nil {
+		return Response{}, err
+	}
+
 	response := Response{Version: request.Version, Metadata: buildMetadata(mr, commit)}
 
 	return response, nil
 }
 
-func (command *Command) createRepositoryUrl(pid int, token string) (*url.URL, error) {
-	project, _, err := command.client.Projects.GetProject(pid, &gitlab.GetProjectOptions{})
-	if err != nil {
-		return nil, err
-	}
-
-	u, err := url.Parse(project.HTTPURLToRepo)
+func (command *Command) createRepositoryURL(uri, token string) (*url.URL, error) {
+	u, err := url.Parse(uri)
 	if err != nil {
 		return nil, err
 	}
@@ -144,19 +158,19 @@ func (command *Command) createRepositoryUrl(pid int, token string) (*url.URL, er
 	return u, nil
 }
 
-func buildMetadata(mr *gitlab.MergeRequest, commit *gitlab.Commit) pkg.Metadata {
-	return []pkg.MetadataField{
+func buildMetadata(mr gitlab.MergeRequest, commit gitlab.Commit) models.Metadata {
+	return []models.MetadataField{
 		{
 			Name:  "id",
-			Value: strconv.Itoa(mr.ID),
+			Value: mr.Id,
 		},
 		{
 			Name:  "iid",
-			Value: strconv.Itoa(mr.IID),
+			Value: mr.Iid,
 		},
 		{
 			Name:  "sha",
-			Value: mr.SHA,
+			Value: mr.DiffHeadSha,
 		},
 		{
 			Name:  "message",
@@ -180,7 +194,7 @@ func buildMetadata(mr *gitlab.MergeRequest, commit *gitlab.Commit) pkg.Metadata 
 		},
 		{
 			Name:  "url",
-			Value: mr.WebURL,
+			Value: mr.WebUrl,
 		},
 	}
 }

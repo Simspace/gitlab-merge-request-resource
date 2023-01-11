@@ -5,3 +5,4 @@ samples/
 vendor/
 
 .DS_Store
+source.json

@@ -1,10 +1,11 @@
-package pkg
+package models
 
 import (
 	"encoding/json"
 	"fmt"
 	"net/url"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
@@ -30,7 +31,8 @@ type Source struct {
 }
 
 type Version struct {
-	ID        int        `json:"id,string"`
+	ID        string     `json:"id"`
+	IID       string     `json:"iid"`
 	UpdatedAt *time.Time `json:"updated_at"`
 }
 
@@ -119,4 +121,32 @@ func (source *Source) AcceptPath(path string) bool {
 	}
 
 	return !excluded && included
+}
+
+func matchPath(patterns []string, path string) bool {
+	for _, pattern := range patterns {
+		ok, _ := filepath.Match(pattern, path)
+		if ok {
+			return true
+		}
+		if isInsidePath(pattern, path) {
+			return true
+		}
+	}
+	return false
+}
+
+func isInsidePath(parent, child string) bool {
+	if parent == child {
+		return true
+	}
+
+	// we add a trailing slash so that we only get prefix matches on a
+	// directory separator
+	parentWithTrailingSlash := parent
+	if !strings.HasSuffix(parentWithTrailingSlash, string(filepath.Separator)) {
+		parentWithTrailingSlash += string(filepath.Separator)
+	}
+
+	return strings.HasPrefix(child, parentWithTrailingSlash)
 }

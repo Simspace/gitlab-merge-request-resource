@@ -1,21 +1,26 @@
 package out
 
 import (
+	"context"
 	"encoding/json"
-	"github.com/samcontesse/gitlab-merge-request-resource/pkg"
-	"github.com/xanzy/go-gitlab"
+	"fmt"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
+
+	"github.com/Khan/genqlient/graphql"
+	"github.com/simspace/gitlab-merge-request-resource/pkg/gitlab"
+	"github.com/simspace/gitlab-merge-request-resource/pkg/models"
+	gitlabv4 "github.com/xanzy/go-gitlab"
 )
 
 type Command struct {
-	client *gitlab.Client
+	client   *graphql.Client
+	clientv4 *gitlabv4.Client
 }
 
-func NewCommand(client *gitlab.Client) *Command {
-	return &Command{client}
+func NewCommand(client *graphql.Client, clientv4 *gitlabv4.Client) *Command {
+	return &Command{client, clientv4}
 }
 
 func (command *Command) Run(destination string, request Request) (Response, error) {
@@ -46,7 +51,7 @@ func (command *Command) Run(destination string, request Request) (Response, erro
 		return Response{}, err
 	}
 
-	err = command.updateLabels(request, mr)
+	mr, err = command.updateLabels(request, mr)
 	if err != nil {
 		return Response{}, err
 	}
@@ -56,10 +61,16 @@ func (command *Command) Run(destination string, request Request) (Response, erro
 		return Response{}, err
 	}
 
+	commit, err := mr.GetLatestCommit()
+	if err != nil {
+		return Response{}, err
+	}
+
 	response := Response{
-		Version: pkg.Version{
-			ID:        mr.IID,
-			UpdatedAt: mr.UpdatedAt,
+		Version: models.Version{
+			ID:        mr.Id,
+			IID:       mr.Iid,
+			UpdatedAt: &commit.AuthoredDate,
 		},
 		Metadata: buildMetadata(&mr),
 	}
@@ -73,71 +84,100 @@ func (command *Command) createNote(destination string, request Request, mr gitla
 		return err
 	}
 
-	if body != "" {
-		options := gitlab.CreateMergeRequestNoteOptions{Body: &body}
-		_, _, err := command.client.Notes.CreateMergeRequestNote(mr.SourceProjectID, mr.IID, &options)
-		if err != nil {
-			return err
-		}
+	if body == "" {
+		return nil
 	}
+
+	in := gitlab.CreateNoteInput{
+		Body:                    body,
+		MergeRequestDiffHeadSha: mr.DiffHeadSha,
+		NoteableId:              mr.Id,
+	}
+	_, err = gitlab.CreateNote(context.Background(), *command.client, in)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
-func (command *Command) updateLabels(request Request, mr gitlab.MergeRequest) error {
-	if request.Params.Labels != nil {
-
-		// exclude empty string when there is no tags
-		// this should be fixed in go-gitlab
-		if len(mr.Labels) == 1 && mr.Labels[0] == "" {
-			mr.Labels = mr.Labels[1:]
-		}
-
-		labels := append(mr.Labels, request.Params.Labels...)
-		options := gitlab.UpdateMergeRequestOptions{Labels: &labels}
-
-		result, _, err := command.client.MergeRequests.UpdateMergeRequest(mr.SourceProjectID, mr.IID, &options)
-		if err != nil {
-			return err
-		}
-
-		mr = *result
+// updateLabels appends labels to a merge request, if labels are supplied,
+// and returns the updated MergeRequest object from the server
+func (command *Command) updateLabels(request Request, mr gitlab.MergeRequest) (gitlab.MergeRequest, error) {
+	if request.Params.Labels == nil {
+		return mr, nil
 	}
-	return nil
+
+	labelMap := map[string]string{}
+	lresp, err := gitlab.ListLabels(context.Background(), *command.client, mr.GetProjectPath())
+	if err != nil {
+		return gitlab.MergeRequest{}, err
+	}
+
+	for _, label := range lresp.Project.Labels.Nodes {
+		labelMap[label.Title] = label.Id
+	}
+	labelIds := []string{}
+	for _, label := range request.Params.Labels {
+		if id, found := labelMap[label]; found {
+			labelIds = append(labelIds, id)
+		} else {
+			return gitlab.MergeRequest{}, fmt.Errorf("could not find an existing label for %s", label)
+		}
+	}
+	in := gitlab.MergeRequestSetLabelsInput{
+		Iid:           mr.Iid,
+		LabelIds:      labelIds,
+		OperationMode: gitlab.MutationOperationModeAppend,
+		ProjectPath:   mr.GetProjectPath(),
+	}
+	resp, err := gitlab.SetMergeRequestLabels(context.Background(), *command.client, in)
+	if err != nil {
+		return gitlab.MergeRequest{}, err
+	}
+
+	return resp.MergeRequestSetLabels.GetMergeRequest(), nil
 }
 
 func (command *Command) updateCommitStatus(request Request, mr gitlab.MergeRequest) error {
-	if request.Params.Status != "" {
-		state := gitlab.BuildState(gitlab.BuildStateValue(request.Params.Status))
-		target := request.Source.GetTargetURL()
-		name := request.Source.GetPipelineName()
-		options := gitlab.SetCommitStatusOptions{
-			Name:      &name,
-			TargetURL: &target,
-			State:     *state,
-		}
+	if request.Params.Status == "" {
+		return nil
+	}
 
-		_, _, err := command.client.Commits.SetCommitStatus(mr.SourceProjectID, mr.SHA, &options)
-		if err != nil {
-			return err
-		}
+	state := gitlabv4.BuildState(gitlabv4.BuildStateValue(request.Params.Status))
+	target := request.Source.GetTargetURL()
+	name := request.Source.GetPipelineName()
+	options := gitlabv4.SetCommitStatusOptions{
+		Name:      &name,
+		TargetURL: &target,
+		State:     *state,
+	}
+
+	_, _, err := command.clientv4.Commits.SetCommitStatus(mr.SourceProjectId, mr.DiffHeadSha, &options)
+	if err != nil {
+		return err
 	}
 	return nil
 }
 
-func buildMetadata(mr *gitlab.MergeRequest) pkg.Metadata {
+func buildMetadata(mr *gitlab.MergeRequest) models.Metadata {
+	var labels []string
+	for _, label := range mr.GetLabels().Nodes {
+		labels = append(labels, label.Title)
+	}
 
-	return []pkg.MetadataField{
+	return []models.MetadataField{
 		{
 			Name:  "id",
-			Value: strconv.Itoa(mr.ID),
+			Value: mr.Id,
 		},
 		{
 			Name:  "iid",
-			Value: strconv.Itoa(mr.IID),
+			Value: mr.Iid,
 		},
 		{
 			Name:  "sha",
-			Value: mr.SHA,
+			Value: mr.DiffHeadSha,
 		},
 		{
 			Name:  "title",
@@ -157,11 +197,11 @@ func buildMetadata(mr *gitlab.MergeRequest) pkg.Metadata {
 		},
 		{
 			Name:  "url",
-			Value: mr.WebURL,
+			Value: mr.WebUrl,
 		},
 		{
 			Name:  "labels",
-			Value: strings.Join(mr.Labels, ","),
+			Value: strings.Join(labels, ","),
 		},
 	}
 }

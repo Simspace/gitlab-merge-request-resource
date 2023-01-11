@@ -11,7 +11,7 @@ resource_types:
 - name: merge-request
   type: docker-image
   source:
-    repository: samcontesse/gitlab-merge-request-resource
+    repository: simspace/gitlab-merge-request-resource
 
 resources:
 - name: merge-request
@@ -26,15 +26,14 @@ resources:
 * `insecure`: When set to `true`, SSL verification is turned off 
 * `skip_work_in_progress`: When set to `true`, merge requests mark as work in progress (WIP) will be skipped. Default `false`
 * `skip_not_mergeable`: When set to `true`, merge requests not marked as mergeable will be skipped. Default `false`
-* `skip_trigger_comment`: When set to `true`, the resource will not look up for `[trigger ci]` merge request comments to manually trigger builds. Default `false`  
+* `skip_trigger_comment`: When set to `true`, the resource will not look up for `[trigger ci]` merge request comments to manually trigger builds. Default `false`
 * `concourse_url`: When set, this url will be used to override `ATC_EXTERNAL_URL` during commit status updates.
-* `pipeline_name`(string): When set, this url will be used to override `BUILD_PIPELINE_NAME` during commit status updates.  
+* `pipeline_name`(string): When set, this url will be used to override `BUILD_PIPELINE_NAME` during commit status updates.
 * `labels`(string[]): Filter merge requests by label`[]`
-* `paths` (string[]): Include merge request if one of the modified file matches a path pattern (glob). Default: include all. 
-* `ignore_paths` (string[]): Exclude merge request if one of the modified files matches a path pattern (glob). Default: exclude none. 
+* `paths` (string[]): Include merge request if one of the modified files match a path pattern (glob) or is included inside a directory defined here. Default: include all. 
+* `ignore_paths` (string[]): Exclude merge request if one of the modified files matches a path pattern (glob) or is included inside a directory defined here. Default: exclude none. 
 * `target_branch`(string): Filter merge requests by target_branch. Default is empty string.
 * `source_branch`(string): Filter merge requests by source_branch. Default is empty string.
-* `sort` (string): Merge requests sorting order, either `asc` (default) or `desc` to reverse.
 * `ssh_keys` (string[]): When set to a non-empty array, an ssh-agent will be started and the specified keys will be added to it.  This is only relevant for submodules with an ssh URL and passphrase encrypted keys are not supported.
 * `recursive`: When set to `true`, will pull submodules by issuing a `git submodule update --init --recursive`.  Note that if your submodules are hosted on the same server, be sure to [use a relative path](https://www.gniibe.org/memo/software/git/using-submodule.html) to avoid ssh/https protocol clashing (as the MR is fetched via https, this resource would have no way to authenticate a git+ssh connection).
 
@@ -51,6 +50,8 @@ Checks if there are new merge requests or merge requests with new commits.
 If you need to retrieve any information about the merge request in your tasks, the script writes the raw API response of the
 [get single merge request call](https://docs.gitlab.com/ee/api/merge_requests.html#get-single-mr) to `.git/merge-request.json`. 
 The name of the source branch is extracted to `.git/merge-request-source-branch` for convenience. 
+The paths of all changed files are also saved to
+`.git/resources/changed_files`.
 
 ### `out`: Update a merge request's merge status
 
@@ -94,3 +95,78 @@ jobs:
           Add new comment.
           $FILE_CONTENT
 ```
+## Development
+
+This resource uses genqlient for handling GraphQL APIs, by autogenerating Go
+types from GraphQL queries. 
+
+### Updating GraphQL queries or schema
+The Gitlab API schema is included here to aid in
+autogeneration but may need to be updated from time to time. The schema can be
+downloaded by using the [Apollo](https://www.apollographql.com/docs/devtools/cli/) CLI.
+
+* Install the Apollo CLI.
+    * On Mac systems: `brew install apollo-cli`
+    * On other sytems: `npm install -D apollo`
+* Run the CLI to download the Gitlab schema:
+    ```sh
+    apollo client:download-schema \
+      --endpoint=https://gitlab.com/api/graphql \
+      gitlab_schema.graphql
+    ```
+
+With the schema downloaded, you can use genqlient to update or create new API
+queries.
+
+In `gitlab/graphql.go` there are several throwaway constants. Here we can
+create a new constant (assigned to `_`, thus not used anywhere) with our raw
+GraphQL query as a string. At the head of the string, add `# @genqlient` to let
+genqlient know to generate this query.
+
+A basic query might look like this:
+```go
+_ = `# @genqlient
+query GetCurrentUser {
+  currentUser{
+    name
+    publicEmail
+  }
+}`
+```
+
+Configuration commands can also be added as comments. A more complex example
+might look like this: 
+```go
+_ = `# @genqlient
+# @genqlient(for: "CreateNoteInput.clientMutationId", omitempty: true)
+# @genqlient(for: "CreateNoteInput.discussionId", omitempty: true)
+# @genqlient(for: "CreateNoteInput.internal", omitempty: true)
+mutation CreateNote(
+  $input: CreateNoteInput!
+) {
+  createNote(input: $input) {
+    errors
+  }
+}`
+```
+
+Once you have added all of the API queries and saved the file, run `go
+generate` from the root of the repository to autogenerate the code.
+
+Now, you can use the query as a Go function with the same name. So, our first
+example can be called like this:
+```go
+resp := gitlab.GetCurrentUser()
+
+fmt.Printf("Username: %s\n", resp.CurrentUser.Name)
+```
+
+See the
+[genqlient
+docs](https://github.com/Khan/genqlient/blob/main/docs/INTRODUCTION.md) for
+more details and in-depth configuration.
+
+
+### Testing
+This project uses the Ginkgo test framework with Gomega matchers. All new
+functionality should have accompanying test specs.

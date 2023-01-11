@@ -1,20 +1,21 @@
 package out
 
 import (
-	"github.com/samcontesse/gitlab-merge-request-resource/pkg"
 	"os"
 	"path"
 	"strings"
+
+	"github.com/simspace/gitlab-merge-request-resource/pkg/models"
 )
 
 type Request struct {
-	Source pkg.Source `json:"source"`
-	Params Params     `json:"params"`
+	Source models.Source `json:"source"`
+	Params Params        `json:"params"`
 }
 
 type Response struct {
-	Version  pkg.Version  `json:"version"`
-	Metadata pkg.Metadata `json:"metadata"`
+	Version  models.Version  `json:"version"`
+	Metadata models.Metadata `json:"metadata"`
 }
 
 type Params struct {
