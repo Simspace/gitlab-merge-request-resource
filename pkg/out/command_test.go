@@ -128,6 +128,7 @@ var _ = Describe("Out", func() {
 				}
 				sresp := gitlab.SetMergeRequestLabelsResponse{
 					MergeRequestSetLabels: gitlab.SetMergeRequestLabelsMergeRequestSetLabelsMergeRequestSetLabelsPayload{
+						Errors: []string{},
 						MergeRequest: gitlab.MergeRequest{
 							Id:          "gid//gitlab/MergeRequest/1",
 							Iid:         "42",
@@ -227,7 +228,11 @@ var _ = Describe("Out", func() {
 
 		BeforeEach(func() {
 			mux.HandleFunc("/api/graphql", func(w http.ResponseWriter, r *http.Request) {
-				resp := gitlab.CreateNoteResponse{}
+				resp := gitlab.CreateNoteResponse{
+					CreateNote: gitlab.CreateNoteCreateNoteCreateNotePayload{
+						Errors: []string{},
+					},
+				}
 				output, _ := json.Marshal(graphql.Response{Data: &resp})
 				w.Header().Set("content-type", "application/json")
 				w.WriteHeader(http.StatusOK)

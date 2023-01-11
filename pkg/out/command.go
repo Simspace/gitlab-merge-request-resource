@@ -87,13 +87,12 @@ func (command *Command) createNote(destination string, request Request, mr gitla
 	if body == "" {
 		return nil
 	}
-
 	in := gitlab.CreateNoteInput{
 		Body:                    body,
 		MergeRequestDiffHeadSha: mr.DiffHeadSha,
 		NoteableId:              mr.Id,
 	}
-	_, err = gitlab.CreateNote(context.Background(), *command.client, in)
+	_, err = gitlab.WrapErrors(gitlab.CreateNote(context.Background(), *command.client, in))
 	if err != nil {
 		return err
 	}
@@ -110,6 +109,7 @@ func (command *Command) updateLabels(request Request, mr gitlab.MergeRequest) (g
 
 	labelMap := map[string]string{}
 	lresp, err := gitlab.ListLabels(context.Background(), *command.client, mr.GetProjectPath())
+
 	if err != nil {
 		return gitlab.MergeRequest{}, err
 	}
@@ -117,6 +117,7 @@ func (command *Command) updateLabels(request Request, mr gitlab.MergeRequest) (g
 	for _, label := range lresp.Project.Labels.Nodes {
 		labelMap[label.Title] = label.Id
 	}
+
 	labelIds := []string{}
 	for _, label := range request.Params.Labels {
 		if id, found := labelMap[label]; found {
@@ -131,12 +132,16 @@ func (command *Command) updateLabels(request Request, mr gitlab.MergeRequest) (g
 		OperationMode: gitlab.MutationOperationModeAppend,
 		ProjectPath:   mr.GetProjectPath(),
 	}
-	resp, err := gitlab.SetMergeRequestLabels(context.Background(), *command.client, in)
+	resp, err := gitlab.WrapErrors(gitlab.SetMergeRequestLabels(context.Background(), *command.client, in))
 	if err != nil {
 		return gitlab.MergeRequest{}, err
 	}
 
-	return resp.MergeRequestSetLabels.GetMergeRequest(), nil
+	if mresp, ok := resp.(*gitlab.SetMergeRequestLabelsResponse); ok {
+		return mresp.MergeRequestSetLabels.GetMergeRequest(), nil
+	}
+
+	return gitlab.MergeRequest{}, fmt.Errorf("SetMergeRequestLabels returned unexpected type: %T", resp)
 }
 
 func (command *Command) updateCommitStatus(request Request, mr gitlab.MergeRequest) error {
