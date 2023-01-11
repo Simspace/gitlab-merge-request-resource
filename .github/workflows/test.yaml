@@ -15,7 +15,10 @@ jobs:
           cache: true
 
       - name: Build
-        run: go build -v ./...
+        run: |
+          go build -v cmd/check/main.go
+          go build -v cmd/in/main.go
+          go build -v cmd/out/main.go
 
       - name: Test
         run: go test -v ./...
