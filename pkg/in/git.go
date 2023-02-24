@@ -1,8 +1,10 @@
 package in
 
 import (
+	"fmt"
 	"os"
 	"os/exec"
+	"strings"
 )
 
 type GitRunner interface {
@@ -23,7 +25,7 @@ func (r DefaultRunner) Run(args ...string) error {
 	command.Stderr = os.Stderr
 	err := command.Run()
 	if err != nil {
-		return err
+		return fmt.Errorf("'git %s': %s", strings.Join(args, " "), err.Error())
 	}
 	return nil
 }

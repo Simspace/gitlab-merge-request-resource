@@ -92,7 +92,10 @@ func (command *Command) Run(destination string, request Request) (Response, erro
 		}
 	}
 
-	os.Chdir(destination)
+	err = os.Chdir(destination)
+	if err != nil {
+		return Response{}, err
+	}
 
 	err = command.runner.Run("remote", "add", "source", source.String())
 	if err != nil {
@@ -116,7 +119,10 @@ func (command *Command) Run(destination string, request Request) (Response, erro
 		}
 	}
 
-	notes, _ := json.Marshal(mr)
+	notes, err := json.Marshal(mr)
+	if err != nil {
+		return Response{}, err
+	}
 	err = os.WriteFile(".git/merge-request.json", notes, 0644)
 	if err != nil {
 		return Response{}, err
